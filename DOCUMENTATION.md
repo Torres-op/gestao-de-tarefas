@@ -895,10 +895,7 @@ informação de que o usuário precisa quando a ação é recusada.
 ### Limitações conhecidas
 
 **Não há autenticação nem controle de acesso.** Qualquer pessoa com acesso à aplicação pode
-criar, editar e excluir qualquer registro. Está fora do escopo do P1.
-
-**Não há paginação nas listagens.** Com o volume de dados de um trabalho acadêmico não faz
-diferença; em produção, `ListView` já oferece `paginate_by` para resolver.
+criar, editar e excluir qualquer registro.
 
 **A detecção de ciclo consulta o banco a cada nível do grafo.** Para os tamanhos previstos
 aqui isso é irrelevante. Um projeto com milhares de dependências encadeadas se beneficiaria
