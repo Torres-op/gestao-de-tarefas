@@ -1,8 +1,8 @@
-# Gestão de Tarefas
+# Grello
 
-Sistema de gestão de tarefas com subtarefas e dependências entre tarefas, desenvolvido em
-Django puro (padrão MVT) com PostgreSQL, para a disciplina de Laboratório de Programação
-Full Stack — entrega P1.
+**Grello** é um sistema de gestão de tarefas com subtarefas e dependências entre tarefas,
+desenvolvido em Django puro (padrão MVT) com PostgreSQL, para a disciplina de Laboratório de
+Programação Full Stack — entrega P1.
 
 **Regra central:** uma tarefa não pode ser concluída enquanto qualquer tarefa da qual ela
 depende — ou qualquer subtarefa dela — não estiver concluída. O sistema bloqueia a ação e

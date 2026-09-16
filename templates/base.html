@@ -1,45 +1,61 @@
-{% load static %}<!DOCTYPE html>
+{% load static %}<!doctype html>
 <html lang="pt-br">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Gestão de Tarefas{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Grello{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  </head>
+  <body>
     <header class="site-header">
-        <div class="container header-inner">
-            <a class="brand" href="{% url 'home' %}">
-                <span class="brand-mark">GT</span>
-                <span>Gestão de Tarefas</span>
-            </a>
-            <nav class="main-nav">
-                <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Início</a>
-                <a href="{% url 'projects:list' %}" class="{% if request.resolver_match.app_name == 'projects' %}active{% endif %}">Projetos</a>
-                <a href="{% url 'tasks:list' %}" class="{% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">Tarefas</a>
-                <a href="{% url 'members:list' %}" class="{% if request.resolver_match.app_name == 'members' %}active{% endif %}">Membros</a>
-            </nav>
-        </div>
+      <div class="container header-inner">
+        <a class="brand" href="{% url 'home' %}">
+          <span class="brand-mark">GR</span>
+          <span>Grello</span>
+        </a>
+        <nav class="main-nav">
+          <a
+            href="{% url 'home' %}"
+            class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+            >Início</a
+          >
+          <a
+            href="{% url 'projects:list' %}"
+            class="{% if request.resolver_match.app_name == 'projects' %}active{% endif %}"
+            >Projetos</a
+          >
+          <a
+            href="{% url 'tasks:list' %}"
+            class="{% if request.resolver_match.app_name == 'tasks' %}active{% endif %}"
+            >Tarefas</a
+          >
+          <a
+            href="{% url 'members:list' %}"
+            class="{% if request.resolver_match.app_name == 'members' %}active{% endif %}"
+            >Membros</a
+          >
+        </nav>
+      </div>
     </header>
 
     <main class="container page">
-        {% include "partials/_messages.html" %}
+      {% include "partials/_messages.html" %}
 
-        <div class="page-head">
-            <div>
-                <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
-                {% block page_subtitle %}{% endblock %}
-            </div>
-            <div class="page-actions">{% block page_actions %}{% endblock %}</div>
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+          {% block page_subtitle %}{% endblock %}
         </div>
+        <div class="page-actions">{% block page_actions %}{% endblock %}</div>
+      </div>
 
-        {% block content %}{% endblock %}
+      {% block content %}{% endblock %}
     </main>
 
     <footer class="site-footer">
-        <div class="container">
-            <p>Laboratório de Programação Full Stack &middot; Entrega P1</p>
-        </div>
+      <div class="container">
+        <p>@torres-op</p>
+      </div>
     </footer>
-</body>
+  </body>
 </html>

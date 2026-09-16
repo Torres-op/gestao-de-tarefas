@@ -1,7 +1,7 @@
-# Gestão de Tarefas — Documentação técnica
+# Grello — Documentação técnica
 
-Documentação de arquitetura e implementação do sistema **Gestão de Tarefas**, entrega P1 da
-disciplina de Laboratório de Programação Full Stack.
+Documentação de arquitetura e implementação do **Grello**, sistema de gestão de tarefas
+entregue como P1 da disciplina de Laboratório de Programação Full Stack.
 
 Este arquivo concentra toda a explicação do projeto. O código-fonte não contém comentários
 por decisão de projeto: o que precisa ser explicado está aqui, onde pode ser lido de forma
