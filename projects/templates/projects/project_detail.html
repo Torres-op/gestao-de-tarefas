@@ -5,7 +5,8 @@
 {% block page_title %}{{ project.name }}{% endblock %}
 
 {% block page_actions %}
-    <a href="{% url 'projects:update' project.pk %}" class="btn btn-primary">Editar</a>
+    <a href="{% url 'tasks:create' %}?project={{ project.pk }}" class="btn btn-primary">Nova tarefa</a>
+    <a href="{% url 'projects:update' project.pk %}" class="btn btn-ghost">Editar</a>
     <a href="{% url 'projects:delete' project.pk %}" class="btn btn-ghost">Excluir</a>
     <a href="{% url 'projects:list' %}" class="btn btn-ghost">Voltar</a>
 {% endblock %}
@@ -24,6 +25,26 @@
 
             <dt>Criado em</dt>
             <dd>{{ project.created_at|date:"d/m/Y H:i" }}</dd>
+
+            <dt>Progresso</dt>
+            <dd>
+                <p class="progress-label">{{ project.completed_task_count }} de {{ project.task_count }} tarefas concluídas ({{ project.progress_percent }}%)</p>
+                <div class="progress"><span style="width: {{ project.progress_percent }}%"></span></div>
+            </dd>
         </dl>
     </div>
+
+    <div class="section-head">
+        <h2>Tarefas do projeto</h2>
+        <a href="{% url 'tasks:create' %}?project={{ project.pk }}" class="btn btn-ghost btn-sm">Nova tarefa</a>
+    </div>
+
+    {% if project.tasks.all %}
+        {% include "tasks/partials/_task_table.html" with tasks=project.tasks.all %}
+    {% else %}
+        <div class="card empty">
+            <p>Este projeto ainda não tem tarefas.</p>
+            <a href="{% url 'tasks:create' %}?project={{ project.pk }}" class="btn btn-primary">Criar a primeira tarefa</a>
+        </div>
+    {% endif %}
 {% endblock %}

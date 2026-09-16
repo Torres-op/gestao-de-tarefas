@@ -31,6 +31,9 @@
                         </div>
                     </dl>
 
+                    <p class="progress-label">{{ project.completed_task_count }} de {{ project.task_count }} tarefas concluídas</p>
+                    <div class="progress"><span style="width: {{ project.progress_percent }}%"></span></div>
+
                     <div class="card-actions">
                         <a href="{% url 'projects:detail' project.pk %}" class="btn btn-ghost btn-sm">Abrir</a>
                         <a href="{% url 'projects:update' project.pk %}" class="btn btn-ghost btn-sm">Editar</a>

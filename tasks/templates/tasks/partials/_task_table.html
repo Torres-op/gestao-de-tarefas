@@ -1,0 +1,44 @@
+<div class="card card-flush table-wrapper">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Tarefa</th>
+                {% if show_project %}<th>Projeto</th>{% endif %}
+                <th>Responsável</th>
+                <th>Prazo</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+                <tr>
+                    <td>
+                        <a href="{% url 'tasks:detail' task.pk %}">{{ task.title }}</a>
+                        {% if task.subtask_count %}
+                            <p class="cell-note">{{ task.completed_subtask_count }} de {{ task.subtask_count }} subtarefas concluídas</p>
+                        {% endif %}
+                    </td>
+                    {% if show_project %}
+                        <td><a href="{% url 'projects:detail' task.project.pk %}">{{ task.project.name }}</a></td>
+                    {% endif %}
+                    <td>
+                        {% if task.assignee %}
+                            <a href="{% url 'members:detail' task.assignee.pk %}">{{ task.assignee.name }}</a>
+                        {% else %}
+                            <span class="muted">Sem responsável</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.due_date|date:"d/m/Y"|default:"—" }}</td>
+                    <td>{% include "tasks/partials/_status_badge.html" with task=task %}</td>
+                    <td>
+                        <div class="cell-actions">
+                            <a href="{% url 'tasks:update' task.pk %}" class="btn btn-ghost btn-sm">Editar</a>
+                            <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-ghost btn-sm">Excluir</a>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -11,12 +11,14 @@ class ProjectListView(ListView):
     model = Project
     template_name = "projects/project_list.html"
     context_object_name = "projects"
+    queryset = Project.objects.prefetch_related("tasks")
 
 
 class ProjectDetailView(DetailView):
     model = Project
     template_name = "projects/project_detail.html"
     context_object_name = "project"
+    queryset = Project.objects.prefetch_related("tasks__assignee", "tasks__subtasks")
 
 
 class ProjectCreateView(SuccessMessageMixin, CreateView):

@@ -1,0 +1,7 @@
+{% if task.is_done %}
+    <span class="badge badge-success">{{ task.get_status_display }}</span>
+{% elif task.is_in_progress %}
+    <span class="badge badge-info">{{ task.get_status_display }}</span>
+{% else %}
+    <span class="badge badge-neutral">{{ task.get_status_display }}</span>
+{% endif %}

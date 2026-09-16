@@ -1,1 +1,148 @@
-from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+
+from projects.models import Project
+
+from .forms import SubtaskForm, TaskForm
+from .models import Subtask, Task
+
+
+class TaskListView(ListView):
+    model = Task
+    template_name = "tasks/task_list.html"
+    context_object_name = "tasks"
+
+    def get_selected_project_id(self):
+        project_id = self.request.GET.get("project", "")
+        return int(project_id) if project_id.isdigit() else None
+
+    def get_selected_status(self):
+        status = self.request.GET.get("status", "")
+        return status if status in Task.Status.values else ""
+
+    def get_queryset(self):
+        queryset = Task.objects.select_related("project", "assignee").prefetch_related("subtasks")
+        project_id = self.get_selected_project_id()
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        status = self.get_selected_status()
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["projects"] = Project.objects.all()
+        context["status_choices"] = Task.Status.choices
+        context["selected_project_id"] = self.get_selected_project_id()
+        context["selected_status"] = self.get_selected_status()
+        return context
+
+
+class TaskDetailView(DetailView):
+    model = Task
+    template_name = "tasks/task_detail.html"
+    context_object_name = "task"
+    queryset = Task.objects.select_related("project", "assignee").prefetch_related("subtasks")
+
+
+class TaskCreateView(SuccessMessageMixin, CreateView):
+    model = Task
+    form_class = TaskForm
+    template_name = "tasks/task_form.html"
+    success_message = 'Tarefa "%(title)s" criada com sucesso.'
+    extra_context = {"page_title": "Nova tarefa", "submit_label": "Criar tarefa"}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        project_id = self.request.GET.get("project", "")
+        if project_id.isdigit():
+            initial["project"] = project_id
+        return initial
+
+
+class TaskUpdateView(SuccessMessageMixin, UpdateView):
+    model = Task
+    form_class = TaskForm
+    template_name = "tasks/task_form.html"
+    success_message = 'Tarefa "%(title)s" atualizada com sucesso.'
+    extra_context = {"page_title": "Editar tarefa", "submit_label": "Salvar alterações"}
+
+
+class TaskDeleteView(DeleteView):
+    model = Task
+    template_name = "tasks/task_confirm_delete.html"
+    context_object_name = "task"
+
+    def get_success_url(self):
+        return self.object.project.get_absolute_url()
+
+    def form_valid(self, form):
+        title = self.object.title
+        response = super().form_valid(form)
+        messages.success(self.request, f'Tarefa "{title}" excluída com sucesso.')
+        return response
+
+
+def subtask_create(request, task_pk):
+    task = get_object_or_404(Task, pk=task_pk)
+    if request.method == "POST":
+        form = SubtaskForm(request.POST)
+        if form.is_valid():
+            subtask = form.save(commit=False)
+            subtask.task = task
+            subtask.save()
+            messages.success(request, f'Subtarefa "{subtask.title}" adicionada.')
+            return redirect(task)
+    else:
+        form = SubtaskForm()
+    context = {
+        "form": form,
+        "task": task,
+        "page_title": "Nova subtarefa",
+        "submit_label": "Adicionar subtarefa",
+    }
+    return render(request, "tasks/subtask_form.html", context)
+
+
+def subtask_update(request, pk):
+    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    if request.method == "POST":
+        form = SubtaskForm(request.POST, instance=subtask)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Subtarefa "{subtask.title}" atualizada.')
+            return redirect(subtask.task)
+    else:
+        form = SubtaskForm(instance=subtask)
+    context = {
+        "form": form,
+        "task": subtask.task,
+        "page_title": "Editar subtarefa",
+        "submit_label": "Salvar alterações",
+    }
+    return render(request, "tasks/subtask_form.html", context)
+
+
+def subtask_delete(request, pk):
+    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    if request.method == "POST":
+        subtask.delete()
+        messages.success(request, f'Subtarefa "{subtask.title}" excluída.')
+        return redirect(subtask.task)
+    return render(request, "tasks/subtask_confirm_delete.html", {"subtask": subtask})
+
+
+@require_POST
+def subtask_toggle(request, pk):
+    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    subtask.is_done = not subtask.is_done
+    subtask.save(update_fields=["is_done"])
+    if subtask.is_done:
+        messages.success(request, f'Subtarefa "{subtask.title}" marcada como concluída.')
+    else:
+        messages.info(request, f'Subtarefa "{subtask.title}" reaberta.')
+    return redirect(subtask.task)

@@ -16,6 +16,7 @@
             <nav class="main-nav">
                 <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Início</a>
                 <a href="{% url 'projects:list' %}" class="{% if request.resolver_match.app_name == 'projects' %}active{% endif %}">Projetos</a>
+                <a href="{% url 'tasks:list' %}" class="{% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">Tarefas</a>
                 <a href="{% url 'members:list' %}" class="{% if request.resolver_match.app_name == 'members' %}active{% endif %}">Membros</a>
             </nav>
         </div>

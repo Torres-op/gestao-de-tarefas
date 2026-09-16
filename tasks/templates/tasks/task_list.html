@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Tarefas &middot; Gestão de Tarefas{% endblock %}
+
+{% block page_title %}Tarefas{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">Todas as tarefas cadastradas, de todos os projetos.</p>
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'tasks:create' %}" class="btn btn-primary">Nova tarefa</a>
+{% endblock %}
+
+{% block content %}
+    <form method="get" class="card filter-form">
+        <div class="field">
+            <label for="filter-project">Projeto</label>
+            <select name="project" id="filter-project">
+                <option value="">Todos os projetos</option>
+                {% for project in projects %}
+                    <option value="{{ project.pk }}" {% if project.pk == selected_project_id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="filter-status">Status</label>
+            <select name="status" id="filter-status">
+                <option value="">Todos os status</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{% url 'tasks:list' %}" class="btn btn-ghost">Limpar</a>
+        </div>
+    </form>
+
+    {% if tasks %}
+        {% include "tasks/partials/_task_table.html" with tasks=tasks show_project=True %}
+    {% else %}
+        <div class="card empty">
+            <p>Nenhuma tarefa encontrada com os filtros selecionados.</p>
+            <a href="{% url 'tasks:create' %}" class="btn btn-primary">Criar uma tarefa</a>
+        </div>
+    {% endif %}
+{% endblock %}

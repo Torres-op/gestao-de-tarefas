@@ -576,6 +576,81 @@ table.data tr.row-blocked td {
     margin-top: 16px;
 }
 
+.filter-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.filter-form .field {
+    margin-bottom: 0;
+    min-width: 210px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.cell-note {
+    margin: 3px 0 0;
+    font-size: .8rem;
+    color: var(--muted);
+}
+
+.progress-label {
+    margin: 0 0 6px;
+    font-size: .85rem;
+    color: var(--muted);
+}
+
+.checklist {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-top: 1px solid var(--border);
+}
+
+.checklist-title {
+    flex: 1;
+}
+
+.checklist-item-done .checklist-title {
+    color: var(--muted);
+    text-decoration: line-through;
+}
+
+.checklist-toggle {
+    padding: 4px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.checklist-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.checklist-actions {
+    display: flex;
+    gap: 6px;
+}
+
 @media (max-width: 640px) {
     .definition-list {
         grid-template-columns: 1fr;

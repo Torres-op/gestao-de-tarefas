@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} &middot; Tarefas{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    {% url 'tasks:list' as cancel_url %}
+    {% include "partials/_form.html" with submit_label=submit_label cancel_url=cancel_url %}
+{% endblock %}

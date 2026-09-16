@@ -21,6 +21,18 @@ class Project(models.Model):
     def get_absolute_url(self):
         return reverse("projects:detail", kwargs={"pk": self.pk})
 
+    def task_count(self):
+        return len(self.tasks.all())
+
+    def completed_task_count(self):
+        return len([task for task in self.tasks.all() if task.status == task.Status.DONE])
+
+    def progress_percent(self):
+        total = self.task_count()
+        if not total:
+            return 0
+        return round(self.completed_task_count() * 100 / total)
+
     def clean(self):
         if self.start_date and self.due_date and self.due_date < self.start_date:
             raise ValidationError({"due_date": "O prazo final não pode ser anterior à data de início."})

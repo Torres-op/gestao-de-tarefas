@@ -36,4 +36,14 @@
             <dd>{{ member.created_at|date:"d/m/Y H:i" }}</dd>
         </dl>
     </div>
+
+    <h2 class="section-title">Tarefas atribuídas</h2>
+
+    {% if member.tasks.all %}
+        {% include "tasks/partials/_task_table.html" with tasks=member.tasks.all show_project=True %}
+    {% else %}
+        <div class="card empty">
+            <p>Nenhuma tarefa atribuída a este membro.</p>
+        </div>
+    {% endif %}
 {% endblock %}

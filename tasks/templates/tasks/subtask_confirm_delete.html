@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir subtarefa &middot; Tarefas{% endblock %}
+
+{% block page_title %}Excluir subtarefa{% endblock %}
+
+{% block content %}
+    {% url 'tasks:detail' subtask.task.pk as cancel_url %}
+    {% include "partials/_confirm_delete.html" with object_type="a subtarefa" object_label=subtask.title cancel_url=cancel_url %}
+{% endblock %}
