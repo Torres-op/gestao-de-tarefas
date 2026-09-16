@@ -544,6 +544,38 @@ table.data tr.row-blocked td {
     color: var(--muted);
 }
 
+.card-meta {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+    margin: 16px 0 0;
+}
+
+.card-meta dt {
+    color: var(--muted);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.card-meta dd {
+    margin: 2px 0 0;
+    font-weight: 500;
+}
+
+.card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.stack > * + * {
+    margin-top: 16px;
+}
+
 @media (max-width: 640px) {
     .definition-list {
         grid-template-columns: 1fr;

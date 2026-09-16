@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Projetos &middot; Gestão de Tarefas{% endblock %}
+
+{% block page_title %}Projetos{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">Cada projeto agrupa as tarefas de uma frente de trabalho.</p>
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'projects:create' %}" class="btn btn-primary">Novo projeto</a>
+{% endblock %}
+
+{% block content %}
+    {% if projects %}
+        <div class="grid grid-2">
+            {% for project in projects %}
+                <article class="card">
+                    <h2 class="card-title"><a href="{% url 'projects:detail' project.pk %}">{{ project.name }}</a></h2>
+                    <p class="card-text">{{ project.description|default:"Sem descrição."|truncatewords:24 }}</p>
+
+                    <dl class="card-meta">
+                        <div>
+                            <dt>Início</dt>
+                            <dd>{{ project.start_date|date:"d/m/Y"|default:"—" }}</dd>
+                        </div>
+                        <div>
+                            <dt>Prazo final</dt>
+                            <dd>{{ project.due_date|date:"d/m/Y"|default:"—" }}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="card-actions">
+                        <a href="{% url 'projects:detail' project.pk %}" class="btn btn-ghost btn-sm">Abrir</a>
+                        <a href="{% url 'projects:update' project.pk %}" class="btn btn-ghost btn-sm">Editar</a>
+                        <a href="{% url 'projects:delete' project.pk %}" class="btn btn-ghost btn-sm">Excluir</a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card empty">
+            <p>Nenhum projeto cadastrado ainda.</p>
+            <a href="{% url 'projects:create' %}" class="btn btn-primary">Criar o primeiro projeto</a>
+        </div>
+    {% endif %}
+{% endblock %}

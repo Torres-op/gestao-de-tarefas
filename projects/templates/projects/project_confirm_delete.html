@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir projeto &middot; Projetos{% endblock %}
+
+{% block page_title %}Excluir projeto{% endblock %}
+
+{% block content %}
+    {% url 'projects:detail' project.pk as cancel_url %}
+    {% include "partials/_confirm_delete.html" with object_type="o projeto" object_label=project.name confirm_warning="Todas as tarefas deste projeto, com suas subtarefas e dependências, serão excluídas junto." cancel_url=cancel_url %}
+{% endblock %}
