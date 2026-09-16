@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir membro &middot; Membros{% endblock %}
+
+{% block page_title %}Excluir membro{% endblock %}
+
+{% block content %}
+    {% url 'members:detail' member.pk as cancel_url %}
+    {% include "partials/_confirm_delete.html" with object_type="o membro" object_label=member.name confirm_warning="As tarefas atribuídas a este membro continuarão existindo, porém ficarão sem responsável." cancel_url=cancel_url %}
+{% endblock %}

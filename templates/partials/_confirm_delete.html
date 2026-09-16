@@ -1,7 +1,9 @@
 <form method="post" class="card confirm-delete">
     {% csrf_token %}
 
-    <p class="confirm-question">{{ confirm_question }}</p>
+    <p class="confirm-question">
+        Tem certeza que deseja excluir {{ object_type }} <strong>{{ object_label }}</strong>?
+    </p>
     {% if confirm_warning %}<p class="confirm-warning">{{ confirm_warning }}</p>{% endif %}
 
     <div class="form-actions">

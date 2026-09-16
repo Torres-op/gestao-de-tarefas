@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ member.name }} &middot; Membros{% endblock %}
+
+{% block page_title %}{{ member.name }}{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">{{ member.role|default:"Função não informada" }}</p>
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'members:update' member.pk %}" class="btn btn-primary">Editar</a>
+    <a href="{% url 'members:delete' member.pk %}" class="btn btn-ghost">Excluir</a>
+    <a href="{% url 'members:list' %}" class="btn btn-ghost">Voltar</a>
+{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <dl class="definition-list">
+            <dt>E-mail</dt>
+            <dd>{{ member.email }}</dd>
+
+            <dt>Função</dt>
+            <dd>{{ member.role|default:"Não informada" }}</dd>
+
+            <dt>Situação</dt>
+            <dd>
+                {% if member.is_active %}
+                    <span class="badge badge-success">Ativo</span>
+                {% else %}
+                    <span class="badge badge-neutral">Inativo</span>
+                {% endif %}
+            </dd>
+
+            <dt>Cadastrado em</dt>
+            <dd>{{ member.created_at|date:"d/m/Y H:i" }}</dd>
+        </dl>
+    </div>
+{% endblock %}

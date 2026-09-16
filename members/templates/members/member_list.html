@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Membros &middot; Gestão de Tarefas{% endblock %}
+
+{% block page_title %}Membros{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">Pessoas da equipe que podem ser responsáveis pelas tarefas.</p>
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'members:create' %}" class="btn btn-primary">Novo membro</a>
+{% endblock %}
+
+{% block content %}
+    {% if members %}
+        <div class="card card-flush table-wrapper">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Função</th>
+                        <th>Situação</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                        <tr>
+                            <td><a href="{% url 'members:detail' member.pk %}">{{ member.name }}</a></td>
+                            <td>{{ member.email }}</td>
+                            <td>{{ member.role|default:"—" }}</td>
+                            <td>
+                                {% if member.is_active %}
+                                    <span class="badge badge-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge badge-neutral">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="cell-actions">
+                                    <a href="{% url 'members:update' member.pk %}" class="btn btn-ghost btn-sm">Editar</a>
+                                    <a href="{% url 'members:delete' member.pk %}" class="btn btn-ghost btn-sm">Excluir</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card empty">
+            <p>Nenhum membro cadastrado ainda.</p>
+            <a href="{% url 'members:create' %}" class="btn btn-primary">Cadastrar o primeiro membro</a>
+        </div>
+    {% endif %}
+{% endblock %}
