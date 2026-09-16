@@ -1,0 +1,11 @@
+<form method="post" class="card confirm-delete">
+    {% csrf_token %}
+
+    <p class="confirm-question">{{ confirm_question }}</p>
+    {% if confirm_warning %}<p class="confirm-warning">{{ confirm_warning }}</p>{% endif %}
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Excluir</button>
+        <a href="{{ cancel_url }}" class="btn btn-ghost">Cancelar</a>
+    </div>
+</form>
