@@ -95,15 +95,13 @@ class TaskDeleteView(DeleteView):
 def subtask_create(request, task_pk):
     task = get_object_or_404(Task, pk=task_pk)
     if request.method == "POST":
-        form = SubtaskForm(request.POST)
+        form = SubtaskForm(request.POST, task=task)
         if form.is_valid():
-            subtask = form.save(commit=False)
-            subtask.task = task
-            subtask.save()
+            subtask = form.save()
             messages.success(request, f'Subtarefa "{subtask.title}" adicionada.')
             return redirect(task)
     else:
-        form = SubtaskForm()
+        form = SubtaskForm(task=task)
     context = {
         "form": form,
         "task": task,
@@ -116,13 +114,13 @@ def subtask_create(request, task_pk):
 def subtask_update(request, pk):
     subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
     if request.method == "POST":
-        form = SubtaskForm(request.POST, instance=subtask)
+        form = SubtaskForm(request.POST, instance=subtask, task=subtask.task)
         if form.is_valid():
             form.save()
             messages.success(request, f'Subtarefa "{subtask.title}" atualizada.')
             return redirect(subtask.task)
     else:
-        form = SubtaskForm(instance=subtask)
+        form = SubtaskForm(instance=subtask, task=subtask.task)
     context = {
         "form": form,
         "task": subtask.task,
@@ -144,12 +142,18 @@ def subtask_delete(request, pk):
 @require_POST
 def subtask_toggle(request, pk):
     subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
-    subtask.is_done = not subtask.is_done
-    subtask.save(update_fields=["is_done"])
-    if subtask.is_done:
-        messages.success(request, f'Subtarefa "{subtask.title}" marcada como concluída.')
+    try:
+        subtask.toggle()
+    except ValidationError as error:
+        messages.error(
+            request,
+            f'Não é possível reabrir a subtarefa "{subtask.title}". {" ".join(error.messages)}',
+        )
     else:
-        messages.info(request, f'Subtarefa "{subtask.title}" reaberta.')
+        if subtask.is_done:
+            messages.success(request, f'Subtarefa "{subtask.title}" marcada como concluída.')
+        else:
+            messages.info(request, f'Subtarefa "{subtask.title}" reaberta.')
     return redirect(subtask.task)
 
 

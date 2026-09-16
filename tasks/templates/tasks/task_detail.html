@@ -19,10 +19,21 @@
 
 {% block content %}
     {% if task.is_blocked %}
-        <p class="alert-blocked">
-            Esta tarefa não pode ser concluída ainda. Dependências pendentes:
-            {% for dependency in task.pending_dependencies %}<a href="{% url 'tasks:detail' dependency.pk %}">{{ dependency.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
-        </p>
+        <div class="alert-blocked">
+            <p><strong>Esta tarefa ainda não pode ser concluída.</strong></p>
+            {% if task.pending_dependencies %}
+                <p>
+                    Dependências pendentes:
+                    {% for dependency in task.pending_dependencies %}<a href="{% url 'tasks:detail' dependency.pk %}">{{ dependency.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+                </p>
+            {% endif %}
+            {% if task.pending_subtasks %}
+                <p>
+                    Subtarefas em aberto:
+                    {% for subtask in task.pending_subtasks %}{{ subtask.title }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+                </p>
+            {% endif %}
+        </div>
     {% endif %}
 
     <div class="card">

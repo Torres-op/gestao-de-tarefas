@@ -662,6 +662,14 @@ table.data tr.row-blocked td {
     font-size: .92rem;
 }
 
+.alert-blocked p {
+    margin: 0 0 6px;
+}
+
+.alert-blocked p:last-child {
+    margin-bottom: 0;
+}
+
 .alert-blocked a {
     color: var(--warning);
     font-weight: 600;

@@ -5,8 +5,8 @@ Django puro (padrão MVT) com PostgreSQL, para a disciplina de Laboratório de P
 Full Stack — entrega P1.
 
 **Regra central:** uma tarefa não pode ser concluída enquanto qualquer tarefa da qual ela
-depende não estiver concluída. O sistema bloqueia a ação e mostra quais dependências
-pendentes estão impedindo a conclusão.
+depende — ou qualquer subtarefa dela — não estiver concluída. O sistema bloqueia a ação e
+mostra exatamente quais pendências estão impedindo a conclusão.
 
 A documentação completa de arquitetura, modelagem e implementação está em
 [DOCUMENTATION.md](DOCUMENTATION.md).
@@ -15,7 +15,7 @@ A documentação completa de arquitetura, modelagem e implementação está em
 
 - CRUD de projetos, membros, tarefas e subtarefas
 - Definição de dependências entre tarefas do mesmo projeto
-- Ação de concluir tarefa com validação das dependências
+- Ação de concluir tarefa com validação das dependências e das subtarefas em aberto
 - Ação de reabrir tarefa, respeitando a mesma ordem
 - Listagem de tarefas com filtros e indicação visual das tarefas bloqueadas
 - Detecção de ciclos no grafo de dependências

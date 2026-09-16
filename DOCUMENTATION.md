@@ -15,7 +15,7 @@ contínua, e não espalhado em trechos soltos dentro dos módulos.
 2. [Stack e decisões de arquitetura](#2-stack-e-decisões-de-arquitetura)
 3. [Estrutura de pastas](#3-estrutura-de-pastas)
 4. [Modelagem de dados](#4-modelagem-de-dados)
-5. [A regra central: bloqueio por dependências](#5-a-regra-central-bloqueio-por-dependências)
+5. [A regra central: bloqueio da conclusão](#5-a-regra-central-bloqueio-da-conclusão)
 6. [Os apps em detalhe](#6-os-apps-em-detalhe)
 7. [Mapa de URLs](#7-mapa-de-urls)
 8. [Camada de templates](#8-camada-de-templates)
@@ -41,6 +41,10 @@ O sistema organiza o trabalho de uma equipe em torno de cinco entidades:
 tarefa da qual ela depende não estiver concluída. O sistema bloqueia a ação e informa na
 interface exatamente quais dependências pendentes estão impedindo a conclusão.
 
+A mesma proteção foi estendida às subtarefas: uma tarefa com itens em aberto na sua própria
+lista também não pode ser concluída. As duas regras convivem no mesmo ponto do código e
+produzem a mesma mensagem combinada — a seção 5 detalha como.
+
 O sistema não tem autenticação nesta entrega — não faz parte do escopo do P1. `Member` é um
 model de domínio próprio e **não** o `User` do Django: representar a pessoa da equipe é uma
 responsabilidade diferente de representar quem faz login no sistema.
@@ -65,7 +69,7 @@ O princípio que organiza o código é: **cada regra mora em um lugar só**.
 
 - **Model** — guarda os dados e as regras que precisam valer sempre, independentemente de
   quem executou a operação (uma view, o admin do Django ou o shell). É onde vive a regra de
-  bloqueio por dependências.
+  bloqueio da conclusão.
 - **Form** — traduz a entrada do usuário em dados válidos e restringe as opções oferecidas.
   Não reimplementa regras do model: o `ModelForm` chama `full_clean()` da instância
   automaticamente e as mensagens do model aparecem nos campos certos.
@@ -266,29 +270,44 @@ para morar. `TaskDependency` existe como model próprio por três motivos concre
 
 ---
 
-## 5. A regra central: bloqueio por dependências
+## 5. A regra central: bloqueio da conclusão
 
-> Uma tarefa não pode ser concluída enquanto qualquer tarefa da qual ela depende não estiver
-> concluída.
+Uma tarefa só pode ser concluída quando **duas** condições valem ao mesmo tempo:
 
-### O invariante, enunciado por completo
+> 1. Todas as tarefas das quais ela depende já estão concluídas.
+> 2. Todas as suas subtarefas já estão concluídas.
 
-A regra acima, escrita como propriedade dos dados, é:
+A primeira é o critério de aceite do P1. A segunda foi acrescentada depois, com a mesma
+mecânica e no mesmo lugar do código: uma tarefa cuja lista de trabalho ainda tem itens em
+aberto não está, de fato, terminada.
 
-> **Para toda dependência (`task` → `depends_on`): se `task` está concluída, então
-> `depends_on` também está concluída.**
+### Os invariantes, enunciados por completo
 
-Enunciada assim, fica claro que **três** operações diferentes poderiam quebrá-la — e não
-apenas uma:
+Escritas como propriedades dos dados, as duas regras são:
+
+> **A.** Para toda dependência (`task` → `depends_on`): se `task` está concluída, então
+> `depends_on` também está concluída.
+>
+> **B.** Para toda subtarefa: se a tarefa dela está concluída, então a subtarefa também está.
+
+Enunciados assim, fica claro que **seis** operações diferentes poderiam quebrá-los — e não
+apenas as duas óbvias:
 
 | # | Operação | Como quebraria | Onde é barrada |
 | --- | --- | --- | --- |
-| 1 | **Concluir** uma tarefa com pré-requisito pendente | é o caso óbvio | `Task.complete()` e `Task.clean()` |
-| 2 | **Reabrir** uma tarefa que é pré-requisito de outra já concluída | inverte a ordem das operações e chega ao mesmo estado inválido | `Task.reopen()` e `Task.clean()` |
-| 3 | **Criar uma dependência** de uma tarefa já concluída para uma pendente | cria a aresta depois, quando o estado já está "errado" | `TaskDependency.clean()` |
+| A1 | **Concluir** uma tarefa com pré-requisito pendente | é o caso óbvio | `Task.complete()` e `Task.clean()` |
+| A2 | **Reabrir** uma tarefa que é pré-requisito de outra já concluída | inverte a ordem das operações e chega ao mesmo estado inválido | `Task.reopen()` e `Task.clean()` |
+| A3 | **Criar uma dependência** de uma tarefa já concluída para uma pendente | cria a aresta depois, quando o estado já está "errado" | `TaskDependency.clean()` |
+| B1 | **Concluir** uma tarefa com subtarefa em aberto | é o caso óbvio | `Task.complete()` e `Task.clean()` |
+| B2 | **Reabrir uma subtarefa** de uma tarefa já concluída | mesma inversão de ordem do caso A2 | `Subtask.toggle()` e `Subtask.clean()` |
+| B3 | **Adicionar uma subtarefa em aberto** a uma tarefa já concluída | cria o item depois, quando o estado já está "errado" | `Subtask.clean()` |
 
-Cobrir apenas o caso 1 deixaria dois caminhos abertos para produzir exatamente o estado que
-o critério de aceite proíbe. Os três estão fechados.
+Cobrir apenas A1 e B1 deixaria quatro caminhos abertos para produzir exatamente o estado que
+as regras proíbem. Os seis estão fechados.
+
+Uma subtarefa já marcada como concluída **pode** ser adicionada a uma tarefa concluída: isso
+não viola nada. E excluir uma subtarefa em aberto de uma tarefa concluída também é permitido,
+porque a operação corrige o estado em vez de quebrá-lo.
 
 ### Onde a regra é validada, e por quê
 
@@ -304,8 +323,11 @@ def pending_dependencies(self):
         if dependency.depends_on.status != self.Status.DONE
     ]
 
+def pending_subtasks(self):
+    return [subtask for subtask in self.subtasks.all() if not subtask.is_done]
+
 def is_blocked(self):
-    return bool(self.pending_dependencies())
+    return bool(self.pending_dependencies()) or bool(self.pending_subtasks())
 
 def complete(self):
     reason = self.blocking_reason()
@@ -315,10 +337,16 @@ def complete(self):
     self.save()
 ```
 
-`blocking_reason()` transforma a lista de pendências na frase que o usuário lê
-(*"Ela depende da tarefa X, que ainda não foi concluída."*), já no singular ou no plural
-conforme o caso. `reopening_reason()` faz o mesmo para o sentido inverso, percorrendo
-`completed_dependents()`.
+`blocking_reason()` reúne **os dois motivos possíveis** numa única frase, já no singular ou
+no plural conforme o caso — por exemplo: *"Ela depende da tarefa X, que ainda não foi
+concluída. A subtarefa Y ainda não foi concluída."* Se uma das causas não se aplica, o trecho
+correspondente simplesmente não entra. `reopening_reason()` faz o mesmo para o sentido
+inverso, percorrendo `completed_dependents()`.
+
+Como `complete()` e `clean()` consultam apenas `blocking_reason()`, acrescentar a regra das
+subtarefas não exigiu tocar em nenhuma view, em nenhum formulário e em nenhuma outra
+validação: bastou incluir o segundo motivo nesse método. É o efeito prático de manter a regra
+num lugar só.
 
 **Por que no model:** a proibição é uma propriedade dos dados, não uma regra de tela. Ela
 precisa valer venha a operação de uma view, do admin do Django ou do shell. O model é o
@@ -355,7 +383,13 @@ campo Status**, sem uma única linha de código no form ou na view. O mesmo `cle
 dois sentidos: concluir bloqueado e reabrir um pré-requisito de algo já concluído.
 
 O `if not self.pk: return` existe porque uma tarefa que ainda não foi salva não tem
-dependências cadastradas — não há nada a verificar.
+dependências nem subtarefas cadastradas — não há nada a verificar.
+
+`Subtask.clean()` faz o mesmo do outro lado da relação: uma subtarefa em aberto não pode ser
+salva se a tarefa dela já estiver concluída. Como `SubtaskForm` também é um `ModelForm`, a
+mensagem aparece sozinha no campo **Concluída**, tanto ao criar quanto ao editar a subtarefa.
+`Subtask.toggle()` aplica a mesma checagem para o botão de marcar/desmarcar da lista, que não
+passa por formulário nenhum.
 
 #### Camada 3 — Views `task_complete` e `task_reopen`: traduzem para HTTP
 
@@ -440,15 +474,15 @@ mensagens específicas normalmente.
 
 ### Sinalização visual do bloqueio
 
-O critério de aceite pede que o sistema informe **quais** dependências estão impedindo a
+O critério de aceite pede que o sistema informe **quais** pendências estão impedindo a
 conclusão. Isso aparece em quatro lugares:
 
 | Onde | O que mostra |
 | --- | --- |
-| Listagem de tarefas | linha destacada, etiqueta "Bloqueada" e o texto "Bloqueada por: X, Y" |
+| Listagem de tarefas | linha destacada, etiqueta "Bloqueada", o texto "Bloqueada por: X, Y" para as dependências e a contagem "1 de 2 subtarefas concluídas" em destaque quando há itens em aberto |
 | Detalhe do projeto | a mesma tabela, com os mesmos indicadores |
 | Detalhe do membro | a mesma tabela, com os mesmos indicadores |
-| Detalhe da tarefa | aviso no topo com links para cada pendência, e a tabela de dependências marcando cada uma como "Atendida" ou "Impede a conclusão" |
+| Detalhe da tarefa | aviso no topo separando "Dependências pendentes" de "Subtarefas em aberto", e a tabela de dependências marcando cada uma como "Atendida" ou "Impede a conclusão" |
 
 O botão "Concluir" continua **clicável** quando a tarefa está bloqueada, por decisão de
 projeto. Um botão desabilitado esconderia a regra em vez de demonstrá-la, e o enunciado pede
@@ -500,7 +534,7 @@ status é concluída" vem de um único ponto do código.
 
 | Componente | Responsabilidade |
 | --- | --- |
-| `Task` | dados da tarefa + **toda a regra de dependências** + progresso de subtarefas |
+| `Task` | dados da tarefa + **toda a regra de bloqueio da conclusão** + progresso de subtarefas |
 | `Subtask` | item de checklist da tarefa |
 | `TaskDependency` | aresta do grafo de pré-requisitos + suas validações |
 | `TaskForm` | `ModelForm`; oferece como responsável apenas membros ativos |
@@ -516,7 +550,7 @@ status é concluída" vem de um único ponto do código.
 | `dependency_create` | cria a aresta com o formulário restrito |
 | `dependency_delete` | remove a aresta, podendo desbloquear a tarefa |
 | `subtask_create` / `subtask_update` / `subtask_delete` | CRUD da subtarefa |
-| `subtask_toggle` | alterna o estado da subtarefa |
+| `subtask_toggle` | **ação com regra**: alterna o estado da subtarefa, ou explica por que não pode reabri-la |
 
 **Views baseadas em classe para o CRUD, funções para as ações.** As generic views do Django
 (`ListView`, `DetailView`, `CreateView`, `UpdateView`, `DeleteView`) eliminam a repetição dos
@@ -524,8 +558,10 @@ quinze fluxos de CRUD. As quatro ações que carregam regra de negócio — conc
 criar e remover dependência — são funções, onde a lógica fica explícita e fácil de ler.
 
 **A subtarefa nunca recebe sua tarefa pelo formulário.** `SubtaskForm` expõe apenas `title` e
-`is_done`; a tarefa vem da URL e é atribuída na view. Assim ninguém consegue reapontar uma
-subtarefa para outra tarefa alterando o HTML.
+`is_done`; a tarefa vem da URL e é entregue ao formulário no `__init__`, que a atribui à
+instância antes da validação. Assim ninguém consegue reapontar uma subtarefa para outra
+tarefa alterando o HTML — e `Subtask.clean()` já encontra a tarefa preenchida quando precisa
+verificar se ela está concluída.
 
 ---
 
@@ -809,6 +845,28 @@ ou sobre os dados criados por `seed_demo`.
 18. Com **B** pendente, abra **C** e remova a dependência de **B**.
     **Esperado:** **C** deixa de aparecer bloqueada e pode ser concluída normalmente.
 
+### Teste 8 — Subtarefas em aberto também impedem a conclusão
+
+19. Abra uma tarefa sem dependências pendentes e adicione duas subtarefas:
+    "Levantar bibliografia" e "Revisar o texto".
+20. Volte à listagem. **Esperado:** a tarefa aparece com a etiqueta "Bloqueada" e a contagem
+    "0 de 2 subtarefas concluídas" em destaque.
+21. Clique em **Concluir**. **Esperado:** recusado, com a mensagem
+    *"…As subtarefas 'Levantar bibliografia', 'Revisar o texto' ainda não foram concluídas."*
+22. Marque apenas a primeira subtarefa e tente concluir de novo.
+    **Esperado:** ainda recusado, agora citando só a subtarefa que falta.
+23. Marque a segunda e conclua a tarefa. **Esperado:** sucesso.
+
+### Teste 9 — A subtarefa não reabre sozinha
+
+24. Na tarefa recém-concluída, clique em **Reabrir** na subtarefa "Levantar bibliografia".
+    **Esperado:** recusado, com a mensagem de que a tarefa já está concluída e precisa ser
+    reaberta antes.
+25. Tente adicionar uma subtarefa nova (em aberto) a essa mesma tarefa concluída.
+    **Esperado:** o formulário volta com erro no campo **Concluída**.
+26. Reabra a tarefa e repita o passo 24. **Esperado:** agora a subtarefa reabre normalmente,
+    e a tarefa volta a aparecer bloqueada.
+
 ---
 
 ## 11. Decisões de projeto e limitações conhecidas
@@ -835,12 +893,6 @@ da listagem. É na página de detalhe que está o quadro completo de dependênci
 informação de que o usuário precisa quando a ação é recusada.
 
 ### Limitações conhecidas
-
-**As subtarefas não bloqueiam a conclusão da tarefa.** O critério de aceite do P1 fala apenas
-de dependências entre tarefas. Uma tarefa com subtarefas em aberto pode ser concluída; a
-interface mostra o progresso ("1 de 2 concluídas") para que a situação fique visível, mas não
-impede a ação. Seria uma regra fácil de acrescentar em `Task.complete()` — a decisão de não
-fazê-lo foi deliberada, para não ampliar o escopo definido.
 
 **Não há autenticação nem controle de acesso.** Qualquer pessoa com acesso à aplicação pode
 criar, editar e excluir qualquer registro. Está fora do escopo do P1.

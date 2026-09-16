@@ -15,14 +15,14 @@
                 <tr class="{% if task.is_blocked %}row-blocked{% endif %}">
                     <td>
                         <a href="{% url 'tasks:detail' task.pk %}">{{ task.title }}</a>
-                        {% if task.is_blocked %}
+                        {% if task.pending_dependencies %}
                             <p class="cell-note cell-note-blocked">
                                 Bloqueada por:
                                 {% for dependency in task.pending_dependencies %}{{ dependency.title }}{% if not forloop.last %}, {% endif %}{% endfor %}
                             </p>
                         {% endif %}
                         {% if task.subtask_count %}
-                            <p class="cell-note">{{ task.completed_subtask_count }} de {{ task.subtask_count }} subtarefas concluídas</p>
+                            <p class="cell-note{% if task.pending_subtasks %} cell-note-blocked{% endif %}">{{ task.completed_subtask_count }} de {{ task.subtask_count }} subtarefas concluídas</p>
                         {% endif %}
                     </td>
                     {% if show_project %}

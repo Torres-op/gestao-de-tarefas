@@ -78,16 +78,28 @@ class Task(models.Model):
         ]
 
     def is_blocked(self):
-        return bool(self.pending_dependencies())
+        return bool(self.pending_dependencies()) or bool(self.pending_subtasks())
 
     def blocking_reason(self):
-        pending = self.pending_dependencies()
-        if not pending:
-            return ""
-        titles = ", ".join(f'"{task.title}"' for task in pending)
-        if len(pending) == 1:
-            return f"Ela depende da tarefa {titles}, que ainda não foi concluída."
-        return f"Ela depende das tarefas {titles}, que ainda não foram concluídas."
+        reasons = []
+
+        pending_tasks = self.pending_dependencies()
+        if pending_tasks:
+            titles = ", ".join(f'"{task.title}"' for task in pending_tasks)
+            if len(pending_tasks) == 1:
+                reasons.append(f"Ela depende da tarefa {titles}, que ainda não foi concluída.")
+            else:
+                reasons.append(f"Ela depende das tarefas {titles}, que ainda não foram concluídas.")
+
+        open_subtasks = self.pending_subtasks()
+        if open_subtasks:
+            titles = ", ".join(f'"{subtask.title}"' for subtask in open_subtasks)
+            if len(open_subtasks) == 1:
+                reasons.append(f"A subtarefa {titles} ainda não foi concluída.")
+            else:
+                reasons.append(f"As subtarefas {titles} ainda não foram concluídas.")
+
+        return " ".join(reasons)
 
     def reopening_reason(self):
         dependents = self.completed_dependents()
@@ -121,6 +133,9 @@ class Task(models.Model):
     def subtask_count(self):
         return len(self.subtasks.all())
 
+    def pending_subtasks(self):
+        return [subtask for subtask in self.subtasks.all() if not subtask.is_done]
+
     def completed_subtask_count(self):
         return len([subtask for subtask in self.subtasks.all() if subtask.is_done])
 
@@ -152,6 +167,29 @@ class Subtask(models.Model):
 
     def get_absolute_url(self):
         return self.task.get_absolute_url()
+
+    def clean(self):
+        if self.task_id is None or self.is_done:
+            return
+        reason = self.reopening_reason()
+        if reason:
+            raise ValidationError({"is_done": reason})
+
+    def reopening_reason(self):
+        if self.task.is_done():
+            return (
+                f'A tarefa "{self.task.title}" já está concluída. '
+                "Reabra a tarefa antes de deixar uma subtarefa em aberto."
+            )
+        return ""
+
+    def toggle(self):
+        if self.is_done:
+            reason = self.reopening_reason()
+            if reason:
+                raise ValidationError(reason)
+        self.is_done = not self.is_done
+        self.save()
 
 
 class TaskDependency(models.Model):

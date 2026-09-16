@@ -33,6 +33,10 @@ class SubtaskForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"placeholder": "Ex.: Desenhar o diagrama ER"}),
         }
 
+    def __init__(self, *args, task, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.task = task
+
 
 class TaskDependencyForm(forms.ModelForm):
     class Meta:

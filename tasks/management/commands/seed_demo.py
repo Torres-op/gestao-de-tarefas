@@ -91,4 +91,6 @@ class Command(BaseCommand):
         TaskDependency.objects.create(task=testing, depends_on=enrollment)
 
         self.stdout.write(self.style.SUCCESS(f'Projeto "{PROJECT_NAME}" criado com 3 membros, 5 tarefas, 4 subtarefas e 5 dependências.'))
-        self.stdout.write('Tarefas bloqueadas neste cenário: "Implementar o cadastro de alunos" e "Testar o fluxo de matrícula".')
+        self.stdout.write("Neste cenário ficam bloqueadas:")
+        self.stdout.write('  por subtarefas em aberto: "Modelar o banco de dados" e "Desenhar as telas"')
+        self.stdout.write('  por dependências pendentes: "Implementar o cadastro de alunos" e "Testar o fluxo de matrícula"')
