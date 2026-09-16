@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from projects.models import Project
 
-from .forms import SubtaskForm, TaskForm
-from .models import Subtask, Task
+from .forms import SubtaskForm, TaskDependencyForm, TaskForm
+from .models import Subtask, Task, TaskDependency
 
 
 class TaskListView(ListView):
@@ -24,7 +25,9 @@ class TaskListView(ListView):
         return status if status in Task.Status.values else ""
 
     def get_queryset(self):
-        queryset = Task.objects.select_related("project", "assignee").prefetch_related("subtasks")
+        queryset = Task.objects.select_related("project", "assignee").prefetch_related(
+            "subtasks", "dependencies__depends_on"
+        )
         project_id = self.get_selected_project_id()
         if project_id:
             queryset = queryset.filter(project_id=project_id)
@@ -46,7 +49,9 @@ class TaskDetailView(DetailView):
     model = Task
     template_name = "tasks/task_detail.html"
     context_object_name = "task"
-    queryset = Task.objects.select_related("project", "assignee").prefetch_related("subtasks")
+    queryset = Task.objects.select_related("project", "assignee").prefetch_related(
+        "subtasks", "dependencies__depends_on", "dependents__task"
+    )
 
 
 class TaskCreateView(SuccessMessageMixin, CreateView):
@@ -146,3 +151,61 @@ def subtask_toggle(request, pk):
     else:
         messages.info(request, f'Subtarefa "{subtask.title}" reaberta.')
     return redirect(subtask.task)
+
+
+@require_POST
+def task_complete(request, pk):
+    task = get_object_or_404(Task.objects.prefetch_related("dependencies__depends_on"), pk=pk)
+    try:
+        task.complete()
+    except ValidationError as error:
+        messages.error(request, f'Não é possível concluir "{task.title}". {" ".join(error.messages)}')
+    else:
+        messages.success(request, f'Tarefa "{task.title}" concluída.')
+    return redirect(task)
+
+
+@require_POST
+def task_reopen(request, pk):
+    task = get_object_or_404(Task.objects.prefetch_related("dependents__task"), pk=pk)
+    try:
+        task.reopen()
+    except ValidationError as error:
+        messages.error(request, f'Não é possível reabrir "{task.title}". {" ".join(error.messages)}')
+    else:
+        messages.success(request, f'Tarefa "{task.title}" reaberta.')
+    return redirect(task)
+
+
+def dependency_create(request, task_pk):
+    task = get_object_or_404(Task.objects.select_related("project"), pk=task_pk)
+    if request.method == "POST":
+        form = TaskDependencyForm(request.POST, task=task)
+        if form.is_valid():
+            dependency = form.save()
+            messages.success(
+                request,
+                f'A tarefa "{task.title}" agora depende de "{dependency.depends_on.title}".',
+            )
+            return redirect(task)
+    else:
+        form = TaskDependencyForm(task=task)
+    context = {
+        "form": form,
+        "task": task,
+        "has_candidates": form.fields["depends_on"].queryset.exists(),
+        "page_title": "Nova dependência",
+        "submit_label": "Adicionar dependência",
+    }
+    return render(request, "tasks/dependency_form.html", context)
+
+
+@require_POST
+def dependency_delete(request, pk):
+    dependency = get_object_or_404(TaskDependency.objects.select_related("task", "depends_on"), pk=pk)
+    dependency.delete()
+    messages.success(
+        request,
+        f'A tarefa "{dependency.task.title}" não depende mais de "{dependency.depends_on.title}".',
+    )
+    return redirect(dependency.task)

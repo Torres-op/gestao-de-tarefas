@@ -651,6 +651,46 @@ table.data tr.row-blocked td {
     gap: 6px;
 }
 
+.alert-blocked {
+    margin: 0 0 16px;
+    padding: 13px 16px;
+    border: 1px solid #edd6ac;
+    border-left: 4px solid var(--warning);
+    border-radius: var(--radius);
+    background: var(--warning-soft);
+    color: var(--warning);
+    font-size: .92rem;
+}
+
+.alert-blocked a {
+    color: var(--warning);
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.cell-note-blocked {
+    color: var(--warning);
+    font-weight: 500;
+}
+
+.plain-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.plain-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.plain-list li:last-child {
+    border-bottom: none;
+}
+
 @media (max-width: 640px) {
     .definition-list {
         grid-template-columns: 1fr;

@@ -17,7 +17,9 @@ class MemberDetailView(DetailView):
     model = Member
     template_name = "members/member_detail.html"
     context_object_name = "member"
-    queryset = Member.objects.prefetch_related("tasks__project", "tasks__subtasks")
+    queryset = Member.objects.prefetch_related(
+        "tasks__project", "tasks__subtasks", "tasks__dependencies__depends_on"
+    )
 
 
 class MemberCreateView(SuccessMessageMixin, CreateView):

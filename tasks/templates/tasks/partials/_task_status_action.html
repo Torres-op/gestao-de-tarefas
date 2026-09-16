@@ -1,0 +1,11 @@
+{% if task.is_done %}
+    <form method="post" action="{% url 'tasks:reopen' task.pk %}" class="inline-form">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm">Reabrir</button>
+    </form>
+{% else %}
+    <form method="post" action="{% url 'tasks:complete' task.pk %}" class="inline-form">
+        {% csrf_token %}
+        <button type="submit" class="btn {% if task.is_blocked %}btn-ghost{% else %}btn-success{% endif %} btn-sm">Concluir</button>
+    </form>
+{% endif %}

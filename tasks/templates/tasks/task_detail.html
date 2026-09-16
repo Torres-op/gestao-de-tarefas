@@ -11,12 +11,20 @@
 {% endblock %}
 
 {% block page_actions %}
-    <a href="{% url 'tasks:update' task.pk %}" class="btn btn-primary">Editar</a>
+    {% include "tasks/partials/_task_status_action.html" with task=task %}
+    <a href="{% url 'tasks:update' task.pk %}" class="btn btn-ghost">Editar</a>
     <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-ghost">Excluir</a>
     <a href="{% url 'tasks:list' %}" class="btn btn-ghost">Voltar</a>
 {% endblock %}
 
 {% block content %}
+    {% if task.is_blocked %}
+        <p class="alert-blocked">
+            Esta tarefa não pode ser concluída ainda. Dependências pendentes:
+            {% for dependency in task.pending_dependencies %}<a href="{% url 'tasks:detail' dependency.pk %}">{{ dependency.title }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+        </p>
+    {% endif %}
+
     <div class="card">
         <dl class="definition-list">
             <dt>Status</dt>
@@ -43,6 +51,68 @@
             {% endif %}
         </dl>
     </div>
+
+    <div class="section-head">
+        <h2>Dependências</h2>
+        <a href="{% url 'tasks:dependency_create' task.pk %}" class="btn btn-ghost btn-sm">Adicionar dependência</a>
+    </div>
+
+    {% if task.dependencies.all %}
+        <div class="card card-flush table-wrapper">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Esta tarefa depende de</th>
+                        <th>Status do pré-requisito</th>
+                        <th>Situação</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dependency in task.dependencies.all %}
+                        <tr>
+                            <td><a href="{% url 'tasks:detail' dependency.depends_on.pk %}">{{ dependency.depends_on.title }}</a></td>
+                            <td>{% include "tasks/partials/_status_badge.html" with task=dependency.depends_on %}</td>
+                            <td>
+                                {% if dependency.depends_on.is_done %}
+                                    <span class="badge badge-success">Atendida</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Impede a conclusão</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="cell-actions">
+                                    <form method="post" action="{% url 'tasks:dependency_delete' dependency.pk %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-ghost btn-sm">Remover</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card empty">
+            <p>Esta tarefa não depende de nenhuma outra.</p>
+            <a href="{% url 'tasks:dependency_create' task.pk %}" class="btn btn-primary">Adicionar dependência</a>
+        </div>
+    {% endif %}
+
+    {% if task.dependents.all %}
+        <h2 class="section-title">Tarefas que dependem desta</h2>
+        <div class="card">
+            <ul class="plain-list">
+                {% for dependency in task.dependents.all %}
+                    <li>
+                        <a href="{% url 'tasks:detail' dependency.task.pk %}">{{ dependency.task.title }}</a>
+                        {% include "tasks/partials/_status_badge.html" with task=dependency.task %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     <div class="section-head">
         <h2>Subtarefas</h2>

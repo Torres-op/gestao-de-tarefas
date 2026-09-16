@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from members.models import Member
 
-from .models import Subtask, Task
+from .models import Subtask, Task, TaskDependency
 
 
 class TaskForm(forms.ModelForm):
@@ -32,3 +32,22 @@ class SubtaskForm(forms.ModelForm):
         widgets = {
             "title": forms.TextInput(attrs={"placeholder": "Ex.: Desenhar o diagrama ER"}),
         }
+
+
+class TaskDependencyForm(forms.ModelForm):
+    class Meta:
+        model = TaskDependency
+        fields = ["depends_on"]
+
+    def __init__(self, *args, task, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.task = task
+        already_required = TaskDependency.objects.filter(task=task).values_list("depends_on_id", flat=True)
+        self.fields["depends_on"].queryset = (
+            Task.objects.filter(project_id=task.project_id)
+            .exclude(pk=task.pk)
+            .exclude(pk__in=already_required)
+        )
+        self.fields["depends_on"].label = "Esta tarefa depende de"
+        self.fields["depends_on"].empty_label = "Selecione uma tarefa"
+        self.fields["depends_on"].help_text = "Somente tarefas do mesmo projeto podem ser pré-requisitos."

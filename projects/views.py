@@ -18,7 +18,9 @@ class ProjectDetailView(DetailView):
     model = Project
     template_name = "projects/project_detail.html"
     context_object_name = "project"
-    queryset = Project.objects.prefetch_related("tasks__assignee", "tasks__subtasks")
+    queryset = Project.objects.prefetch_related(
+        "tasks__assignee", "tasks__subtasks", "tasks__dependencies__depends_on"
+    )
 
 
 class ProjectCreateView(SuccessMessageMixin, CreateView):

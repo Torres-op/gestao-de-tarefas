@@ -1,5 +1,7 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 from members.models import Member
 from projects.models import Project
@@ -44,6 +46,72 @@ class Task(models.Model):
     def get_absolute_url(self):
         return reverse("tasks:detail", kwargs={"pk": self.pk})
 
+    def save(self, *args, **kwargs):
+        if self.status == self.Status.DONE and self.completed_at is None:
+            self.completed_at = timezone.now()
+        elif self.status != self.Status.DONE:
+            self.completed_at = None
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        if not self.pk:
+            return
+        if self.status == self.Status.DONE:
+            reason = self.blocking_reason()
+        else:
+            reason = self.reopening_reason()
+        if reason:
+            raise ValidationError({"status": reason})
+
+    def pending_dependencies(self):
+        return [
+            dependency.depends_on
+            for dependency in self.dependencies.all()
+            if dependency.depends_on.status != self.Status.DONE
+        ]
+
+    def completed_dependents(self):
+        return [
+            dependency.task
+            for dependency in self.dependents.all()
+            if dependency.task.status == self.Status.DONE
+        ]
+
+    def is_blocked(self):
+        return bool(self.pending_dependencies())
+
+    def blocking_reason(self):
+        pending = self.pending_dependencies()
+        if not pending:
+            return ""
+        titles = ", ".join(f'"{task.title}"' for task in pending)
+        if len(pending) == 1:
+            return f"Ela depende da tarefa {titles}, que ainda não foi concluída."
+        return f"Ela depende das tarefas {titles}, que ainda não foram concluídas."
+
+    def reopening_reason(self):
+        dependents = self.completed_dependents()
+        if not dependents:
+            return ""
+        titles = ", ".join(f'"{task.title}"' for task in dependents)
+        if len(dependents) == 1:
+            return f"A tarefa {titles} depende desta e já está concluída."
+        return f"As tarefas {titles} dependem desta e já estão concluídas."
+
+    def complete(self):
+        reason = self.blocking_reason()
+        if reason:
+            raise ValidationError(reason)
+        self.status = self.Status.DONE
+        self.save()
+
+    def reopen(self):
+        reason = self.reopening_reason()
+        if reason:
+            raise ValidationError(reason)
+        self.status = self.Status.IN_PROGRESS
+        self.save()
+
     def is_done(self):
         return self.status == self.Status.DONE
 
@@ -84,3 +152,76 @@ class Subtask(models.Model):
 
     def get_absolute_url(self):
         return self.task.get_absolute_url()
+
+
+class TaskDependency(models.Model):
+    task = models.ForeignKey(
+        Task,
+        verbose_name="Tarefa dependente",
+        on_delete=models.CASCADE,
+        related_name="dependencies",
+    )
+    depends_on = models.ForeignKey(
+        Task,
+        verbose_name="Depende da tarefa",
+        on_delete=models.CASCADE,
+        related_name="dependents",
+    )
+    created_at = models.DateTimeField("Criada em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Dependência"
+        verbose_name_plural = "Dependências"
+        ordering = ["depends_on__title"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["task", "depends_on"],
+                name="unique_task_dependency",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(task=models.F("depends_on")),
+                name="prevent_self_dependency",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.task} depende de {self.depends_on}"
+
+    def clean(self):
+        if self.task_id is None or self.depends_on_id is None:
+            return
+
+        if self.task_id == self.depends_on_id:
+            raise ValidationError({"depends_on": "Uma tarefa não pode depender dela mesma."})
+
+        if self.task.project_id != self.depends_on.project_id:
+            raise ValidationError({"depends_on": "A dependência precisa ser uma tarefa do mesmo projeto."})
+
+        duplicated = TaskDependency.objects.filter(
+            task_id=self.task_id, depends_on_id=self.depends_on_id
+        ).exclude(pk=self.pk)
+        if duplicated.exists():
+            raise ValidationError({"depends_on": "Esta dependência já foi cadastrada."})
+
+        if self.task.status == Task.Status.DONE and self.depends_on.status != Task.Status.DONE:
+            raise ValidationError(
+                {"depends_on": f'A tarefa "{self.task.title}" já está concluída e não pode passar a depender de uma tarefa pendente.'}
+            )
+
+        if self.creates_cycle():
+            raise ValidationError({"depends_on": "Esta dependência criaria um ciclo entre as tarefas."})
+
+    def creates_cycle(self):
+        visited = set()
+        pending = [self.task_id]
+        while pending:
+            current = pending.pop()
+            if current == self.depends_on_id:
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            pending.extend(
+                TaskDependency.objects.filter(depends_on_id=current).values_list("task_id", flat=True)
+            )
+        return False

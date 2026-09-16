@@ -12,9 +12,15 @@
         </thead>
         <tbody>
             {% for task in tasks %}
-                <tr>
+                <tr class="{% if task.is_blocked %}row-blocked{% endif %}">
                     <td>
                         <a href="{% url 'tasks:detail' task.pk %}">{{ task.title }}</a>
+                        {% if task.is_blocked %}
+                            <p class="cell-note cell-note-blocked">
+                                Bloqueada por:
+                                {% for dependency in task.pending_dependencies %}{{ dependency.title }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </p>
+                        {% endif %}
                         {% if task.subtask_count %}
                             <p class="cell-note">{{ task.completed_subtask_count }} de {{ task.subtask_count }} subtarefas concluídas</p>
                         {% endif %}
@@ -30,9 +36,13 @@
                         {% endif %}
                     </td>
                     <td>{{ task.due_date|date:"d/m/Y"|default:"—" }}</td>
-                    <td>{% include "tasks/partials/_status_badge.html" with task=task %}</td>
+                    <td>
+                        {% include "tasks/partials/_status_badge.html" with task=task %}
+                        {% if task.is_blocked %}<span class="badge badge-warning">Bloqueada</span>{% endif %}
+                    </td>
                     <td>
                         <div class="cell-actions">
+                            {% include "tasks/partials/_task_status_action.html" with task=task %}
                             <a href="{% url 'tasks:update' task.pk %}" class="btn btn-ghost btn-sm">Editar</a>
                             <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-ghost btn-sm">Excluir</a>
                         </div>
