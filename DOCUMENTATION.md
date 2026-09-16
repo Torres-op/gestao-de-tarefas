@@ -29,15 +29,15 @@ contínua, e não espalhado em trechos soltos dentro dos módulos.
 
 O sistema organiza o trabalho de uma equipe em torno de cinco entidades:
 
-| Entidade | Papel |
-| --- | --- |
-| **Projeto** (`Project`) | Agrupa as tarefas de uma frente de trabalho. |
-| **Membro** (`Member`) | Pessoa da equipe que pode ser responsável por tarefas. |
-| **Tarefa** (`Task`) | Unidade de trabalho: pertence a um projeto, tem status e pode ter um responsável. |
-| **Subtarefa** (`Subtask`) | Item de checklist dentro de uma tarefa. |
-| **Dependência** (`TaskDependency`) | Relação de pré-requisito entre duas tarefas do mesmo projeto. |
+| Entidade                           | Papel                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| **Projeto** (`Project`)            | Agrupa as tarefas de uma frente de trabalho.                                      |
+| **Membro** (`Member`)              | Pessoa da equipe que pode ser responsável por tarefas.                            |
+| **Tarefa** (`Task`)                | Unidade de trabalho: pertence a um projeto, tem status e pode ter um responsável. |
+| **Subtarefa** (`Subtask`)          | Item de checklist dentro de uma tarefa.                                           |
+| **Dependência** (`TaskDependency`) | Relação de pré-requisito entre duas tarefas do mesmo projeto.                     |
 
-**Critério de aceite do P1:** uma tarefa não pode ser marcada como concluída enquanto qualquer
+**Critério de aceite:** uma tarefa não pode ser marcada como concluída enquanto qualquer
 tarefa da qual ela depende não estiver concluída. O sistema bloqueia a ação e informa na
 interface exatamente quais dependências pendentes estão impedindo a conclusão.
 
@@ -45,7 +45,7 @@ A mesma proteção foi estendida às subtarefas: uma tarefa com itens em aberto 
 lista também não pode ser concluída. As duas regras convivem no mesmo ponto do código e
 produzem a mesma mensagem combinada — a seção 5 detalha como.
 
-O sistema não tem autenticação nesta entrega — não faz parte do escopo do P1. `Member` é um
+O sistema não tem autenticação nesta entrega — `Member` é um
 model de domínio próprio e **não** o `User` do Django: representar a pessoa da equipe é uma
 responsabilidade diferente de representar quem faz login no sistema.
 
@@ -53,15 +53,15 @@ responsabilidade diferente de representar quem faz login no sistema.
 
 ## 2. Stack e decisões de arquitetura
 
-| Item | Escolha |
-| --- | --- |
-| Linguagem | Python 3.13 |
-| Framework | Django 6.0.7 (sem Django REST Framework — não há API nesta etapa) |
-| Padrão | MVT (Model, View, Template) |
-| Banco | PostgreSQL 18, acessado exclusivamente pelo ORM do Django (nenhum SQL cru) |
-| Driver | `psycopg` 3.3.5 |
-| Front-end | Apenas HTML gerado pelos templates do Django + uma folha de estilo própria |
-| Configuração | Variáveis de ambiente lidas de um arquivo `.env` via `python-dotenv` |
+| Item         | Escolha                                                                    |
+| ------------ | -------------------------------------------------------------------------- |
+| Linguagem    | Python 3.13                                                                |
+| Framework    | Django 6.0.7 (sem Django REST Framework — não há API nesta etapa)          |
+| Padrão       | MVT (Model, View, Template)                                                |
+| Banco        | PostgreSQL 18, acessado exclusivamente pelo ORM do Django (nenhum SQL cru) |
+| Driver       | `psycopg` 3.3.5                                                            |
+| Front-end    | Apenas HTML gerado pelos templates do Django + uma folha de estilo própria |
+| Configuração | Variáveis de ambiente lidas de um arquivo `.env` via `python-dotenv`       |
 
 ### Separação de responsabilidades
 
@@ -85,7 +85,7 @@ O projeto tem três apps de domínio: `members`, `projects` e `tasks`.
 
 `Subtask` e `TaskDependency` vivem dentro de `tasks` e não em apps próprios porque não são
 domínios independentes: uma subtarefa não existe sem sua tarefa, e uma dependência é uma
-aresta *entre duas tarefas*. Separá-las criaria dependência circular de importação com
+aresta _entre duas tarefas_. Separá-las criaria dependência circular de importação com
 `tasks` sem nenhum ganho de organização. Os três apps representam três perguntas distintas
 do domínio: **quem** faz (`members`), **onde** o trabalho acontece (`projects`) e **o que**
 precisa ser feito (`tasks`).
@@ -151,17 +151,6 @@ Gestao-de-tarefas/
             └── _task_status_action.html    # botão Concluir / Reabrir
 ```
 
-### Idioma
-
-- **Código em inglês**: apps, models, campos, classes, funções, variáveis, nomes de
-  templates, nomes de rotas e caminhos de URL.
-- **Interface em português**: rótulos de formulário, textos dos templates, botões,
-  mensagens de sucesso e erro, títulos de página.
-
-Os dois se encontram nos `verbose_name` dos campos: o campo se chama `name` no código e
-aparece como "Nome" no formulário e no admin, sem que o texto precise ser repetido em
-nenhum template.
-
 ---
 
 ## 4. Modelagem de dados
@@ -184,25 +173,25 @@ nenhum template.
 
 ### `members.Member`
 
-| Campo | Tipo | Observações |
-| --- | --- | --- |
-| `name` | `CharField(max_length=120)` | |
-| `email` | `EmailField(unique=True)` | identifica a pessoa |
-| `role` | `CharField(max_length=80, blank=True)` | cargo na equipe |
-| `is_active` | `BooleanField(default=True)` | inativo não aparece no select de responsável |
-| `created_at` | `DateTimeField(auto_now_add=True)` | |
+| Campo        | Tipo                                   | Observações                                  |
+| ------------ | -------------------------------------- | -------------------------------------------- |
+| `name`       | `CharField(max_length=120)`            |                                              |
+| `email`      | `EmailField(unique=True)`              | identifica a pessoa                          |
+| `role`       | `CharField(max_length=80, blank=True)` | cargo na equipe                              |
+| `is_active`  | `BooleanField(default=True)`           | inativo não aparece no select de responsável |
+| `created_at` | `DateTimeField(auto_now_add=True)`     |                                              |
 
 Ordenação padrão por `name`.
 
 ### `projects.Project`
 
-| Campo | Tipo | Observações |
-| --- | --- | --- |
-| `name` | `CharField(max_length=120)` | |
-| `description` | `TextField(blank=True)` | |
-| `start_date` | `DateField(null=True, blank=True)` | |
-| `due_date` | `DateField(null=True, blank=True)` | |
-| `created_at` | `DateTimeField(auto_now_add=True)` | |
+| Campo         | Tipo                               | Observações |
+| ------------- | ---------------------------------- | ----------- |
+| `name`        | `CharField(max_length=120)`        |             |
+| `description` | `TextField(blank=True)`            |             |
+| `start_date`  | `DateField(null=True, blank=True)` |             |
+| `due_date`    | `DateField(null=True, blank=True)` |             |
+| `created_at`  | `DateTimeField(auto_now_add=True)` |             |
 
 Métodos: `task_count()`, `completed_task_count()` e `progress_percent()` — é daqui que sai o
 texto "3 de 5 tarefas concluídas (60%)" e a largura da barra de progresso. O template apenas
@@ -212,35 +201,35 @@ imprime o resultado.
 
 ### `tasks.Task`
 
-| Campo | Tipo | Relacionamento / observação |
-| --- | --- | --- |
-| `project` | `ForeignKey(Project, CASCADE, related_name="tasks")` | excluir o projeto exclui suas tarefas |
-| `assignee` | `ForeignKey(Member, SET_NULL, null=True, blank=True, related_name="tasks")` | excluir o membro deixa a tarefa sem responsável, sem perdê-la |
-| `title` | `CharField(max_length=150)` | |
-| `description` | `TextField(blank=True)` | |
-| `status` | `CharField(choices=Status.choices, default=PENDING)` | `TextChoices`: `pending` / `in_progress` / `done` |
-| `due_date` | `DateField(null=True, blank=True)` | |
-| `completed_at` | `DateTimeField(null=True, blank=True)` | preenchido automaticamente no `save()` |
-| `created_at` / `updated_at` | `DateTimeField` | |
+| Campo                       | Tipo                                                                        | Relacionamento / observação                                   |
+| --------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `project`                   | `ForeignKey(Project, CASCADE, related_name="tasks")`                        | excluir o projeto exclui suas tarefas                         |
+| `assignee`                  | `ForeignKey(Member, SET_NULL, null=True, blank=True, related_name="tasks")` | excluir o membro deixa a tarefa sem responsável, sem perdê-la |
+| `title`                     | `CharField(max_length=150)`                                                 |                                                               |
+| `description`               | `TextField(blank=True)`                                                     |                                                               |
+| `status`                    | `CharField(choices=Status.choices, default=PENDING)`                        | `TextChoices`: `pending` / `in_progress` / `done`             |
+| `due_date`                  | `DateField(null=True, blank=True)`                                          |                                                               |
+| `completed_at`              | `DateTimeField(null=True, blank=True)`                                      | preenchido automaticamente no `save()`                        |
+| `created_at` / `updated_at` | `DateTimeField`                                                             |                                                               |
 
 Ordenação padrão por `due_date`, depois `title`.
 
 ### `tasks.Subtask`
 
-| Campo | Tipo | Relacionamento |
-| --- | --- | --- |
-| `task` | `ForeignKey(Task, CASCADE, related_name="subtasks")` | excluir a tarefa exclui as subtarefas |
-| `title` | `CharField(max_length=150)` | |
-| `is_done` | `BooleanField(default=False)` | |
-| `created_at` | `DateTimeField(auto_now_add=True)` | |
+| Campo        | Tipo                                                 | Relacionamento                        |
+| ------------ | ---------------------------------------------------- | ------------------------------------- |
+| `task`       | `ForeignKey(Task, CASCADE, related_name="subtasks")` | excluir a tarefa exclui as subtarefas |
+| `title`      | `CharField(max_length=150)`                          |                                       |
+| `is_done`    | `BooleanField(default=False)`                        |                                       |
+| `created_at` | `DateTimeField(auto_now_add=True)`                   |                                       |
 
 ### `tasks.TaskDependency`
 
-| Campo | Tipo | Significado |
-| --- | --- | --- |
-| `task` | `ForeignKey(Task, CASCADE, related_name="dependencies")` | a tarefa **dependente**, a que fica bloqueada |
-| `depends_on` | `ForeignKey(Task, CASCADE, related_name="dependents")` | o **pré-requisito**, que precisa terminar antes |
-| `created_at` | `DateTimeField(auto_now_add=True)` | |
+| Campo        | Tipo                                                     | Significado                                     |
+| ------------ | -------------------------------------------------------- | ----------------------------------------------- |
+| `task`       | `ForeignKey(Task, CASCADE, related_name="dependencies")` | a tarefa **dependente**, a que fica bloqueada   |
+| `depends_on` | `ForeignKey(Task, CASCADE, related_name="dependents")`   | o **pré-requisito**, que precisa terminar antes |
+| `created_at` | `DateTimeField(auto_now_add=True)`                       |                                                 |
 
 Restrições no banco:
 
@@ -293,14 +282,14 @@ Escritas como propriedades dos dados, as duas regras são:
 Enunciados assim, fica claro que **seis** operações diferentes poderiam quebrá-los — e não
 apenas as duas óbvias:
 
-| # | Operação | Como quebraria | Onde é barrada |
-| --- | --- | --- | --- |
-| A1 | **Concluir** uma tarefa com pré-requisito pendente | é o caso óbvio | `Task.complete()` e `Task.clean()` |
-| A2 | **Reabrir** uma tarefa que é pré-requisito de outra já concluída | inverte a ordem das operações e chega ao mesmo estado inválido | `Task.reopen()` e `Task.clean()` |
-| A3 | **Criar uma dependência** de uma tarefa já concluída para uma pendente | cria a aresta depois, quando o estado já está "errado" | `TaskDependency.clean()` |
-| B1 | **Concluir** uma tarefa com subtarefa em aberto | é o caso óbvio | `Task.complete()` e `Task.clean()` |
-| B2 | **Reabrir uma subtarefa** de uma tarefa já concluída | mesma inversão de ordem do caso A2 | `Subtask.toggle()` e `Subtask.clean()` |
-| B3 | **Adicionar uma subtarefa em aberto** a uma tarefa já concluída | cria o item depois, quando o estado já está "errado" | `Subtask.clean()` |
+| #   | Operação                                                               | Como quebraria                                                 | Onde é barrada                         |
+| --- | ---------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------- |
+| A1  | **Concluir** uma tarefa com pré-requisito pendente                     | é o caso óbvio                                                 | `Task.complete()` e `Task.clean()`     |
+| A2  | **Reabrir** uma tarefa que é pré-requisito de outra já concluída       | inverte a ordem das operações e chega ao mesmo estado inválido | `Task.reopen()` e `Task.clean()`       |
+| A3  | **Criar uma dependência** de uma tarefa já concluída para uma pendente | cria a aresta depois, quando o estado já está "errado"         | `TaskDependency.clean()`               |
+| B1  | **Concluir** uma tarefa com subtarefa em aberto                        | é o caso óbvio                                                 | `Task.complete()` e `Task.clean()`     |
+| B2  | **Reabrir uma subtarefa** de uma tarefa já concluída                   | mesma inversão de ordem do caso A2                             | `Subtask.toggle()` e `Subtask.clean()` |
+| B3  | **Adicionar uma subtarefa em aberto** a uma tarefa já concluída        | cria o item depois, quando o estado já está "errado"           | `Subtask.clean()`                      |
 
 Cobrir apenas A1 e B1 deixaria quatro caminhos abertos para produzir exatamente o estado que
 as regras proíbem. Os seis estão fechados.
@@ -338,8 +327,8 @@ def complete(self):
 ```
 
 `blocking_reason()` reúne **os dois motivos possíveis** numa única frase, já no singular ou
-no plural conforme o caso — por exemplo: *"Ela depende da tarefa X, que ainda não foi
-concluída. A subtarefa Y ainda não foi concluída."* Se uma das causas não se aplica, o trecho
+no plural conforme o caso — por exemplo: _"Ela depende da tarefa X, que ainda não foi
+concluída. A subtarefa Y ainda não foi concluída."_ Se uma das causas não se aplica, o trecho
 correspondente simplesmente não entra. `reopening_reason()` faz o mesmo para o sentido
 inverso, percorrendo `completed_dependents()`.
 
@@ -466,7 +455,7 @@ a ver** uma opção inválida.
 Isso significa que, na prática, as três primeiras validações de `TaskDependency.clean()`
 raramente são acionadas pela interface: um POST forjado com um valor fora do `queryset` é
 recusado antes, pela validação de escolha do próprio Django, com a mensagem padrão
-*"Faça uma escolha válida"*. Elas continuam valendo para o admin, para o shell e para
+_"Faça uma escolha válida"_. Elas continuam valendo para o admin, para o shell e para
 qualquer código futuro que crie dependências por outro caminho — é defesa em profundidade,
 não código redundante. As duas validações mais interessantes (ciclo e contradição com
 conclusão já feita) envolvem tarefas que **estão** no `queryset` e, portanto, exibem as
@@ -477,16 +466,16 @@ mensagens específicas normalmente.
 O critério de aceite pede que o sistema informe **quais** pendências estão impedindo a
 conclusão. Isso aparece em quatro lugares:
 
-| Onde | O que mostra |
-| --- | --- |
+| Onde                | O que mostra                                                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Listagem de tarefas | linha destacada, etiqueta "Bloqueada", o texto "Bloqueada por: X, Y" para as dependências e a contagem "1 de 2 subtarefas concluídas" em destaque quando há itens em aberto |
-| Detalhe do projeto | a mesma tabela, com os mesmos indicadores |
-| Detalhe do membro | a mesma tabela, com os mesmos indicadores |
-| Detalhe da tarefa | aviso no topo separando "Dependências pendentes" de "Subtarefas em aberto", e a tabela de dependências marcando cada uma como "Atendida" ou "Impede a conclusão" |
+| Detalhe do projeto  | a mesma tabela, com os mesmos indicadores                                                                                                                                   |
+| Detalhe do membro   | a mesma tabela, com os mesmos indicadores                                                                                                                                   |
+| Detalhe da tarefa   | aviso no topo separando "Dependências pendentes" de "Subtarefas em aberto", e a tabela de dependências marcando cada uma como "Atendida" ou "Impede a conclusão"            |
 
 O botão "Concluir" continua **clicável** quando a tarefa está bloqueada, por decisão de
 projeto. Um botão desabilitado esconderia a regra em vez de demonstrá-la, e o enunciado pede
-que o sistema *informe o motivo* — o que só acontece se a tentativa chegar ao servidor. O
+que o sistema _informe o motivo_ — o que só acontece se a tentativa chegar ao servidor. O
 bloqueio é comunicado visualmente pelos indicadores acima; a tentativa produz a mensagem
 explícita.
 
@@ -511,46 +500,46 @@ status é concluída" vem de um único ponto do código.
 
 ### `members`
 
-| Componente | Responsabilidade |
-| --- | --- |
-| `Member` | dados da pessoa da equipe |
-| `MemberForm` | `ModelForm` com placeholders e textos de ajuda |
-| `MemberListView` | lista todos os membros |
-| `MemberDetailView` | dados do membro + tabela das tarefas atribuídas a ele |
-| `MemberCreateView` / `MemberUpdateView` | cadastro e edição, com mensagem de sucesso |
-| `MemberDeleteView` | confirmação e exclusão; avisa que as tarefas ficam sem responsável |
+| Componente                              | Responsabilidade                                                   |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `Member`                                | dados da pessoa da equipe                                          |
+| `MemberForm`                            | `ModelForm` com placeholders e textos de ajuda                     |
+| `MemberListView`                        | lista todos os membros                                             |
+| `MemberDetailView`                      | dados do membro + tabela das tarefas atribuídas a ele              |
+| `MemberCreateView` / `MemberUpdateView` | cadastro e edição, com mensagem de sucesso                         |
+| `MemberDeleteView`                      | confirmação e exclusão; avisa que as tarefas ficam sem responsável |
 
 ### `projects`
 
-| Componente | Responsabilidade |
-| --- | --- |
-| `Project` | dados do projeto + métodos de progresso + validação das datas |
-| `ProjectForm` | `ModelForm` com campos de data nativos do navegador |
-| `ProjectListView` | grade de cartões, cada um com sua barra de progresso |
-| `ProjectDetailView` | dados, progresso e a tabela de tarefas do projeto |
-| `ProjectCreateView` / `ProjectUpdateView` / `ProjectDeleteView` | CRUD |
+| Componente                                                      | Responsabilidade                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| `Project`                                                       | dados do projeto + métodos de progresso + validação das datas |
+| `ProjectForm`                                                   | `ModelForm` com campos de data nativos do navegador           |
+| `ProjectListView`                                               | grade de cartões, cada um com sua barra de progresso          |
+| `ProjectDetailView`                                             | dados, progresso e a tabela de tarefas do projeto             |
+| `ProjectCreateView` / `ProjectUpdateView` / `ProjectDeleteView` | CRUD                                                          |
 
 ### `tasks`
 
-| Componente | Responsabilidade |
-| --- | --- |
-| `Task` | dados da tarefa + **toda a regra de bloqueio da conclusão** + progresso de subtarefas |
-| `Subtask` | item de checklist da tarefa |
-| `TaskDependency` | aresta do grafo de pré-requisitos + suas validações |
-| `TaskForm` | `ModelForm`; oferece como responsável apenas membros ativos |
-| `SubtaskForm` | `ModelForm` com `title` e `is_done`; a tarefa vem da URL |
-| `TaskDependencyForm` | `ModelForm` com um campo só, com o `queryset` restrito |
-| `TaskListView` | listagem geral com filtros por projeto e por status |
-| `TaskDetailView` | tarefa, subtarefas, dependências e quem depende dela |
-| `TaskCreateView` | criação; aceita `?project=<id>` para já vir com o projeto escolhido |
-| `TaskUpdateView` | edição; é aqui que `Task.clean()` barra a conclusão inválida |
-| `TaskDeleteView` | exclusão; volta para o projeto ao final |
-| `task_complete` | **ação com regra**: conclui ou explica por que não pode |
-| `task_reopen` | **ação com regra**: reabre ou explica por que não pode |
-| `dependency_create` | cria a aresta com o formulário restrito |
-| `dependency_delete` | remove a aresta, podendo desbloquear a tarefa |
-| `subtask_create` / `subtask_update` / `subtask_delete` | CRUD da subtarefa |
-| `subtask_toggle` | **ação com regra**: alterna o estado da subtarefa, ou explica por que não pode reabri-la |
+| Componente                                             | Responsabilidade                                                                         |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `Task`                                                 | dados da tarefa + **toda a regra de bloqueio da conclusão** + progresso de subtarefas    |
+| `Subtask`                                              | item de checklist da tarefa                                                              |
+| `TaskDependency`                                       | aresta do grafo de pré-requisitos + suas validações                                      |
+| `TaskForm`                                             | `ModelForm`; oferece como responsável apenas membros ativos                              |
+| `SubtaskForm`                                          | `ModelForm` com `title` e `is_done`; a tarefa vem da URL                                 |
+| `TaskDependencyForm`                                   | `ModelForm` com um campo só, com o `queryset` restrito                                   |
+| `TaskListView`                                         | listagem geral com filtros por projeto e por status                                      |
+| `TaskDetailView`                                       | tarefa, subtarefas, dependências e quem depende dela                                     |
+| `TaskCreateView`                                       | criação; aceita `?project=<id>` para já vir com o projeto escolhido                      |
+| `TaskUpdateView`                                       | edição; é aqui que `Task.clean()` barra a conclusão inválida                             |
+| `TaskDeleteView`                                       | exclusão; volta para o projeto ao final                                                  |
+| `task_complete`                                        | **ação com regra**: conclui ou explica por que não pode                                  |
+| `task_reopen`                                          | **ação com regra**: reabre ou explica por que não pode                                   |
+| `dependency_create`                                    | cria a aresta com o formulário restrito                                                  |
+| `dependency_delete`                                    | remove a aresta, podendo desbloquear a tarefa                                            |
+| `subtask_create` / `subtask_update` / `subtask_delete` | CRUD da subtarefa                                                                        |
+| `subtask_toggle`                                       | **ação com regra**: alterna o estado da subtarefa, ou explica por que não pode reabri-la |
 
 **Views baseadas em classe para o CRUD, funções para as ações.** As generic views do Django
 (`ListView`, `DetailView`, `CreateView`, `UpdateView`, `DeleteView`) eliminam a repetição dos
@@ -573,24 +562,24 @@ qualificados por namespace.
 
 ### Raiz (`config/urls.py`)
 
-| Caminho | Destino | Nome |
-| --- | --- | --- |
-| `/admin/` | admin do Django | — |
-| `/` | página inicial | `home` |
-| `/projects/` | `include("projects.urls")` | — |
-| `/members/` | `include("members.urls")` | — |
-| `/tasks/` | `include("tasks.urls")` | — |
+| Caminho      | Destino                    | Nome   |
+| ------------ | -------------------------- | ------ |
+| `/admin/`    | admin do Django            | —      |
+| `/`          | página inicial             | `home` |
+| `/projects/` | `include("projects.urls")` | —      |
+| `/members/`  | `include("members.urls")`  | —      |
+| `/tasks/`    | `include("tasks.urls")`    | —      |
 
 ### `projects` e `members`
 
 Os dois apps têm o mesmo conjunto de rotas:
 
-| Caminho | Nome | View |
-| --- | --- | --- |
-| `/projects/` | `projects:list` | `ProjectListView` |
-| `/projects/new/` | `projects:create` | `ProjectCreateView` |
-| `/projects/<pk>/` | `projects:detail` | `ProjectDetailView` |
-| `/projects/<pk>/edit/` | `projects:update` | `ProjectUpdateView` |
+| Caminho                  | Nome              | View                |
+| ------------------------ | ----------------- | ------------------- |
+| `/projects/`             | `projects:list`   | `ProjectListView`   |
+| `/projects/new/`         | `projects:create` | `ProjectCreateView` |
+| `/projects/<pk>/`        | `projects:detail` | `ProjectDetailView` |
+| `/projects/<pk>/edit/`   | `projects:update` | `ProjectUpdateView` |
 | `/projects/<pk>/delete/` | `projects:delete` | `ProjectDeleteView` |
 
 O mesmo vale para `/members/…` com os nomes `members:list`, `members:create`,
@@ -598,21 +587,21 @@ O mesmo vale para `/members/…` com os nomes `members:list`, `members:create`,
 
 ### `tasks`
 
-| Caminho | Nome | Método | View |
-| --- | --- | --- | --- |
-| `/tasks/` | `tasks:list` | GET | `TaskListView` |
-| `/tasks/new/` | `tasks:create` | GET/POST | `TaskCreateView` |
-| `/tasks/<pk>/` | `tasks:detail` | GET | `TaskDetailView` |
-| `/tasks/<pk>/edit/` | `tasks:update` | GET/POST | `TaskUpdateView` |
-| `/tasks/<pk>/delete/` | `tasks:delete` | GET/POST | `TaskDeleteView` |
-| `/tasks/<pk>/complete/` | `tasks:complete` | **POST** | `task_complete` |
-| `/tasks/<pk>/reopen/` | `tasks:reopen` | **POST** | `task_reopen` |
+| Caminho                              | Nome                      | Método   | View                |
+| ------------------------------------ | ------------------------- | -------- | ------------------- |
+| `/tasks/`                            | `tasks:list`              | GET      | `TaskListView`      |
+| `/tasks/new/`                        | `tasks:create`            | GET/POST | `TaskCreateView`    |
+| `/tasks/<pk>/`                       | `tasks:detail`            | GET      | `TaskDetailView`    |
+| `/tasks/<pk>/edit/`                  | `tasks:update`            | GET/POST | `TaskUpdateView`    |
+| `/tasks/<pk>/delete/`                | `tasks:delete`            | GET/POST | `TaskDeleteView`    |
+| `/tasks/<pk>/complete/`              | `tasks:complete`          | **POST** | `task_complete`     |
+| `/tasks/<pk>/reopen/`                | `tasks:reopen`            | **POST** | `task_reopen`       |
 | `/tasks/<task_pk>/dependencies/new/` | `tasks:dependency_create` | GET/POST | `dependency_create` |
-| `/tasks/dependencies/<pk>/delete/` | `tasks:dependency_delete` | **POST** | `dependency_delete` |
-| `/tasks/<task_pk>/subtasks/new/` | `tasks:subtask_create` | GET/POST | `subtask_create` |
-| `/tasks/subtasks/<pk>/edit/` | `tasks:subtask_update` | GET/POST | `subtask_update` |
-| `/tasks/subtasks/<pk>/delete/` | `tasks:subtask_delete` | GET/POST | `subtask_delete` |
-| `/tasks/subtasks/<pk>/toggle/` | `tasks:subtask_toggle` | **POST** | `subtask_toggle` |
+| `/tasks/dependencies/<pk>/delete/`   | `tasks:dependency_delete` | **POST** | `dependency_delete` |
+| `/tasks/<task_pk>/subtasks/new/`     | `tasks:subtask_create`    | GET/POST | `subtask_create`    |
+| `/tasks/subtasks/<pk>/edit/`         | `tasks:subtask_update`    | GET/POST | `subtask_update`    |
+| `/tasks/subtasks/<pk>/delete/`       | `tasks:subtask_delete`    | GET/POST | `subtask_delete`    |
+| `/tasks/subtasks/<pk>/toggle/`       | `tasks:subtask_toggle`    | **POST** | `subtask_toggle`    |
 
 Toda rota marcada como **POST** altera estado e só aceita esse método. Todos os formulários
 com `method="post"` incluem `{% csrf_token %}`.
@@ -626,27 +615,27 @@ com `method="post"` incluem `{% csrf_token %}`.
 `templates/base.html` é o template pai de **todas** as páginas. Ele concentra o cabeçalho, o
 menu de navegação, a área de mensagens e o rodapé, e oferece os blocos:
 
-| Bloco | Conteúdo |
-| --- | --- |
-| `title` | título da aba do navegador |
-| `page_title` | título principal da página |
-| `page_subtitle` | linha de apoio abaixo do título |
-| `page_actions` | botões de ação do canto superior direito |
-| `content` | corpo da página |
+| Bloco           | Conteúdo                                 |
+| --------------- | ---------------------------------------- |
+| `title`         | título da aba do navegador               |
+| `page_title`    | título principal da página               |
+| `page_subtitle` | linha de apoio abaixo do título          |
+| `page_actions`  | botões de ação do canto superior direito |
+| `content`       | corpo da página                          |
 
 Nenhum template de app repete `<html>`, menu ou rodapé — todos começam com
 `{% extends "base.html" %}`.
 
 ### Partials reutilizados
 
-| Partial | Onde é usado |
-| --- | --- |
-| `partials/_messages.html` | incluído no `base.html`, vale para o site inteiro |
-| `partials/_form.html` | os **cinco** formulários do sistema |
-| `partials/_confirm_delete.html` | as **quatro** telas de exclusão com confirmação |
-| `tasks/partials/_task_table.html` | listagem de tarefas, detalhe do projeto e detalhe do membro |
-| `tasks/partials/_status_badge.html` | onde quer que um status apareça |
-| `tasks/partials/_task_status_action.html` | botão Concluir/Reabrir na tabela e no detalhe |
+| Partial                                   | Onde é usado                                                |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `partials/_messages.html`                 | incluído no `base.html`, vale para o site inteiro           |
+| `partials/_form.html`                     | os **cinco** formulários do sistema                         |
+| `partials/_confirm_delete.html`           | as **quatro** telas de exclusão com confirmação             |
+| `tasks/partials/_task_table.html`         | listagem de tarefas, detalhe do projeto e detalhe do membro |
+| `tasks/partials/_status_badge.html`       | onde quer que um status apareça                             |
+| `tasks/partials/_task_status_action.html` | botão Concluir/Reabrir na tabela e no detalhe               |
 
 `_form.html` e `_confirm_delete.html` são parametrizados por `{% include ... with %}`
 (`submit_label`, `cancel_url`, `object_type`, `object_label`, `confirm_warning`), em vez de
@@ -806,8 +795,8 @@ ou sobre os dados criados por `seed_demo`.
 
 7. Na linha da tarefa **C**, clique em **Concluir**.
    **Esperado:** a tarefa **não** é concluída e aparece a mensagem
-   *"Não é possível concluir 'Implementar telas'. Ela depende da tarefa 'Modelar banco', que
-   ainda não foi concluída."* O status de **C** continua "Pendente".
+   _"Não é possível concluir 'Implementar telas'. Ela depende da tarefa 'Modelar banco', que
+   ainda não foi concluída."_ O status de **C** continua "Pendente".
 
 ### Teste 3 — O formulário de edição aplica a mesma regra
 
@@ -838,7 +827,7 @@ ou sobre os dados criados por `seed_demo`.
 16. Abra **A** → **Adicionar dependência**.
     **Esperado:** a lista não oferece a própria **A** nem tarefas de outros projetos.
 17. Ainda em **A**, escolha **C** como dependência.
-    **Esperado:** erro *"Esta dependência criaria um ciclo entre as tarefas."*
+    **Esperado:** erro _"Esta dependência criaria um ciclo entre as tarefas."_
 
 ### Teste 7 — Remover a dependência desbloqueia
 
@@ -852,7 +841,7 @@ ou sobre os dados criados por `seed_demo`.
 20. Volte à listagem. **Esperado:** a tarefa aparece com a etiqueta "Bloqueada" e a contagem
     "0 de 2 subtarefas concluídas" em destaque.
 21. Clique em **Concluir**. **Esperado:** recusado, com a mensagem
-    *"…As subtarefas 'Levantar bibliografia', 'Revisar o texto' ainda não foram concluídas."*
+    _"…As subtarefas 'Levantar bibliografia', 'Revisar o texto' ainda não foram concluídas."_
 22. Marque apenas a primeira subtarefa e tente concluir de novo.
     **Esperado:** ainda recusado, agora citando só a subtarefa que falta.
 23. Marque a segunda e conclua a tarefa. **Esperado:** sucesso.
