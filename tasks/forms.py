@@ -34,7 +34,6 @@ class TaskForm(forms.ModelForm):
             
         return cleaned_data
 
-
 class SubtaskForm(forms.ModelForm):
     class Meta:
         model = Subtask

@@ -44,7 +44,6 @@ class TaskListView(ListView):
         context["selected_status"] = self.get_selected_status()
         return context
 
-
 class TaskDetailView(DetailView):
     model = Task
     template_name = "tasks/task_detail.html"
