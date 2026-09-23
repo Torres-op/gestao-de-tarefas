@@ -1,8 +1,6 @@
 from django import forms
 from django.db.models import Q
-
 from members.models import Member
-
 from .models import Subtask, Task, TaskDependency
 
 
@@ -23,6 +21,18 @@ class TaskForm(forms.ModelForm):
             available |= Q(pk=self.instance.assignee_id)
         self.fields["assignee"].queryset = Member.objects.filter(available)
         self.fields["assignee"].empty_label = "Sem responsável"
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        project = cleaned_data.get("project")
+        due_date = cleaned_data.get("due_date")
+        
+        if project and due_date:
+            if due_date < project.created_at.date():
+                raise forms.ValidationError("O prazo não pode ser anterior a criação do projeto")
+            
+        return cleaned_data
 
 
 class SubtaskForm(forms.ModelForm):
