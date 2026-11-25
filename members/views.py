@@ -3,17 +3,19 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from core.permissions import AdminRequiredMixin, OrganizationFormMixin, OrganizationScopedMixin
+
 from .forms import MemberForm
 from .models import Member
 
 
-class MemberListView(ListView):
+class MemberListView(OrganizationScopedMixin, ListView):
     model = Member
     template_name = "members/member_list.html"
     context_object_name = "members"
 
 
-class MemberDetailView(DetailView):
+class MemberDetailView(OrganizationScopedMixin, DetailView):
     model = Member
     template_name = "members/member_detail.html"
     context_object_name = "member"
@@ -22,7 +24,7 @@ class MemberDetailView(DetailView):
     )
 
 
-class MemberCreateView(SuccessMessageMixin, CreateView):
+class MemberCreateView(AdminRequiredMixin, OrganizationFormMixin, SuccessMessageMixin, CreateView):
     model = Member
     form_class = MemberForm
     template_name = "members/member_form.html"
@@ -30,7 +32,9 @@ class MemberCreateView(SuccessMessageMixin, CreateView):
     extra_context = {"page_title": "Novo membro", "submit_label": "Cadastrar membro"}
 
 
-class MemberUpdateView(SuccessMessageMixin, UpdateView):
+class MemberUpdateView(
+    AdminRequiredMixin, OrganizationScopedMixin, OrganizationFormMixin, SuccessMessageMixin, UpdateView
+):
     model = Member
     form_class = MemberForm
     template_name = "members/member_form.html"
@@ -38,7 +42,7 @@ class MemberUpdateView(SuccessMessageMixin, UpdateView):
     extra_context = {"page_title": "Editar membro", "submit_label": "Salvar alterações"}
 
 
-class MemberDeleteView(DeleteView):
+class MemberDeleteView(AdminRequiredMixin, OrganizationScopedMixin, DeleteView):
     model = Member
     template_name = "members/member_confirm_delete.html"
     context_object_name = "member"

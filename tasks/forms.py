@@ -2,6 +2,7 @@ from django import forms
 from django.db.models import Q
 
 from members.models import Member
+from projects.models import Project, Sprint
 
 from .models import Subtask, Task, TaskDependency
 
@@ -9,19 +10,27 @@ from .models import Subtask, Task, TaskDependency
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ["project", "title", "description", "assignee", "status", "due_date"]
+        fields = ["project", "sprint", "title", "description", "assignee", "status", "due_date"]
         widgets = {
             "title": forms.TextInput(attrs={"placeholder": "Ex.: Modelar o banco de dados"}),
             "description": forms.Textarea(attrs={"placeholder": "O que precisa ser feito"}),
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, organization, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["project"].queryset = Project.objects.filter(organization=organization)
+
+        self.fields["sprint"].queryset = Sprint.objects.filter(
+            project__organization=organization
+        ).select_related("project")
+        self.fields["sprint"].empty_label = "Sem sprint (backlog)"
+        self.fields["sprint"].help_text = "A sprint precisa ser do mesmo projeto da tarefa."
+
         available = Q(is_active=True)
         if self.instance.assignee_id:
             available |= Q(pk=self.instance.assignee_id)
-        self.fields["assignee"].queryset = Member.objects.filter(available)
+        self.fields["assignee"].queryset = Member.objects.filter(available, organization=organization)
         self.fields["assignee"].empty_label = "Sem responsável"
 
 

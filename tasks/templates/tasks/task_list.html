@@ -5,7 +5,7 @@
 {% block page_title %}Tarefas{% endblock %}
 
 {% block page_subtitle %}
-    <p class="page-description">Todas as tarefas cadastradas, de todos os projetos.</p>
+    <p class="page-description">Todas as tarefas da sua organização, de todos os projetos.</p>
 {% endblock %}
 
 {% block page_actions %}
@@ -20,6 +20,16 @@
                 <option value="">Todos os projetos</option>
                 {% for project in projects %}
                     <option value="{{ project.pk }}" {% if project.pk == selected_project_id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="filter-sprint">Sprint</label>
+            <select name="sprint" id="filter-sprint">
+                <option value="">Todas as sprints</option>
+                {% for sprint in sprints %}
+                    <option value="{{ sprint.pk }}" {% if sprint.pk == selected_sprint_id %}selected{% endif %}>{{ sprint }}</option>
                 {% endfor %}
             </select>
         </div>

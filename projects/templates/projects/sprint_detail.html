@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ sprint.name }} &middot; {{ sprint.project.name }}{% endblock %}
+
+{% block page_title %}{{ sprint.name }}{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">
+        Projeto: <a href="{% url 'projects:detail' sprint.project.pk %}">{{ sprint.project.name }}</a>
+    </p>
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'tasks:create' %}?project={{ sprint.project.pk }}&sprint={{ sprint.pk }}" class="btn btn-primary">Nova tarefa</a>
+    <a href="{% url 'dashboard:index' %}?sprint={{ sprint.pk }}" class="btn btn-ghost">Ver burndown</a>
+    {% if is_org_admin %}
+        <a href="{% url 'projects:sprint_update' sprint.pk %}" class="btn btn-ghost">Editar</a>
+        <a href="{% url 'projects:sprint_delete' sprint.pk %}" class="btn btn-ghost">Excluir</a>
+    {% endif %}
+    <a href="{% url 'projects:detail' sprint.project.pk %}" class="btn btn-ghost">Voltar</a>
+{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <dl class="definition-list">
+            <dt>Situação</dt>
+            <dd>{% include "projects/partials/_sprint_state_badge.html" with sprint=sprint %}</dd>
+
+            <dt>Período</dt>
+            <dd>{{ sprint.start_date|date:"d/m/Y" }} a {{ sprint.end_date|date:"d/m/Y" }} ({{ sprint.duration_days }} dias)</dd>
+
+            <dt>Objetivo</dt>
+            <dd>{{ sprint.goal|default:"Não informado"|linebreaksbr }}</dd>
+
+            <dt>Progresso</dt>
+            <dd>
+                <p class="progress-label">{{ sprint.completed_task_count }} de {{ sprint.task_count }} tarefas concluídas ({{ sprint.progress_percent }}%)</p>
+                <div class="progress"><span style="width: {{ sprint.progress_percent }}%"></span></div>
+            </dd>
+        </dl>
+    </div>
+
+    <h2 class="section-title">Tarefas da sprint</h2>
+
+    {% if sprint.tasks.all %}
+        {% include "tasks/partials/_task_table.html" with tasks=sprint.tasks.all %}
+    {% else %}
+        <div class="card empty">
+            <p>Nenhuma tarefa foi planejada para esta sprint.</p>
+            <a href="{% url 'tasks:create' %}?project={{ sprint.project.pk }}&sprint={{ sprint.pk }}" class="btn btn-primary">Adicionar uma tarefa</a>
+        </div>
+    {% endif %}
+{% endblock %}

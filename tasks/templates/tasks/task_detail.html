@@ -13,7 +13,7 @@
 {% block page_actions %}
     {% include "tasks/partials/_task_status_action.html" with task=task %}
     <a href="{% url 'tasks:update' task.pk %}" class="btn btn-ghost">Editar</a>
-    <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-ghost">Excluir</a>
+    {% if is_org_admin %}<a href="{% url 'tasks:delete' task.pk %}" class="btn btn-ghost">Excluir</a>{% endif %}
     <a href="{% url 'tasks:list' %}" class="btn btn-ghost">Voltar</a>
 {% endblock %}
 
@@ -40,6 +40,15 @@
         <dl class="definition-list">
             <dt>Status</dt>
             <dd>{% include "tasks/partials/_status_badge.html" with task=task %}</dd>
+
+            <dt>Sprint</dt>
+            <dd>
+                {% if task.sprint %}
+                    <a href="{% url 'projects:sprint_detail' task.sprint.pk %}">{{ task.sprint.name }}</a>
+                {% else %}
+                    <span class="muted">Backlog (sem sprint)</span>
+                {% endif %}
+            </dd>
 
             <dt>Responsável</dt>
             <dd>

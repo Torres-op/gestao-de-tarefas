@@ -5,32 +5,53 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
-from projects.models import Project
+from core.permissions import AdminRequiredMixin, OrganizationFormMixin
+from core.tenancy import current_organization
+from projects.models import Project, Sprint
 
 from .forms import SubtaskForm, TaskDependencyForm, TaskForm
 from .models import Subtask, Task, TaskDependency
 
 
-class TaskListView(ListView):
+def organization_tasks(request):
+    return Task.objects.filter(project__organization=current_organization(request))
+
+
+def organization_subtasks(request):
+    return Subtask.objects.select_related("task").filter(task__project__organization=current_organization(request))
+
+
+class OrganizationTaskMixin:
+    def get_queryset(self):
+        return super().get_queryset().filter(project__organization=current_organization(self.request))
+
+
+class TaskListView(OrganizationTaskMixin, ListView):
     model = Task
     template_name = "tasks/task_list.html"
     context_object_name = "tasks"
 
-    def get_selected_project_id(self):
-        project_id = self.request.GET.get("project", "")
-        return int(project_id) if project_id.isdigit() else None
+    def get_selected_id(self, name):
+        value = self.request.GET.get(name, "")
+        return int(value) if value.isdigit() else None
 
     def get_selected_status(self):
         status = self.request.GET.get("status", "")
         return status if status in Task.Status.values else ""
 
     def get_queryset(self):
-        queryset = Task.objects.select_related("project", "assignee").prefetch_related(
-            "subtasks", "dependencies__depends_on"
+        queryset = (
+            super()
+            .get_queryset()
+            .select_related("project", "assignee", "sprint")
+            .prefetch_related("subtasks", "dependencies__depends_on")
         )
-        project_id = self.get_selected_project_id()
+        project_id = self.get_selected_id("project")
         if project_id:
             queryset = queryset.filter(project_id=project_id)
+        sprint_id = self.get_selected_id("sprint")
+        if sprint_id:
+            queryset = queryset.filter(sprint_id=sprint_id)
         status = self.get_selected_status()
         if status:
             queryset = queryset.filter(status=status)
@@ -38,23 +59,26 @@ class TaskListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["projects"] = Project.objects.all()
+        organization = current_organization(self.request)
+        context["projects"] = Project.objects.filter(organization=organization)
+        context["sprints"] = Sprint.objects.filter(project__organization=organization).select_related("project")
         context["status_choices"] = Task.Status.choices
-        context["selected_project_id"] = self.get_selected_project_id()
+        context["selected_project_id"] = self.get_selected_id("project")
+        context["selected_sprint_id"] = self.get_selected_id("sprint")
         context["selected_status"] = self.get_selected_status()
         return context
 
 
-class TaskDetailView(DetailView):
+class TaskDetailView(OrganizationTaskMixin, DetailView):
     model = Task
     template_name = "tasks/task_detail.html"
     context_object_name = "task"
-    queryset = Task.objects.select_related("project", "assignee").prefetch_related(
+    queryset = Task.objects.select_related("project", "assignee", "sprint").prefetch_related(
         "subtasks", "dependencies__depends_on", "dependents__task"
     )
 
 
-class TaskCreateView(SuccessMessageMixin, CreateView):
+class TaskCreateView(OrganizationFormMixin, SuccessMessageMixin, CreateView):
     model = Task
     form_class = TaskForm
     template_name = "tasks/task_form.html"
@@ -63,13 +87,14 @@ class TaskCreateView(SuccessMessageMixin, CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        project_id = self.request.GET.get("project", "")
-        if project_id.isdigit():
-            initial["project"] = project_id
+        for name in ("project", "sprint"):
+            value = self.request.GET.get(name, "")
+            if value.isdigit():
+                initial[name] = value
         return initial
 
 
-class TaskUpdateView(SuccessMessageMixin, UpdateView):
+class TaskUpdateView(OrganizationTaskMixin, OrganizationFormMixin, SuccessMessageMixin, UpdateView):
     model = Task
     form_class = TaskForm
     template_name = "tasks/task_form.html"
@@ -77,7 +102,7 @@ class TaskUpdateView(SuccessMessageMixin, UpdateView):
     extra_context = {"page_title": "Editar tarefa", "submit_label": "Salvar alterações"}
 
 
-class TaskDeleteView(DeleteView):
+class TaskDeleteView(AdminRequiredMixin, OrganizationTaskMixin, DeleteView):
     model = Task
     template_name = "tasks/task_confirm_delete.html"
     context_object_name = "task"
@@ -93,7 +118,7 @@ class TaskDeleteView(DeleteView):
 
 
 def subtask_create(request, task_pk):
-    task = get_object_or_404(Task, pk=task_pk)
+    task = get_object_or_404(organization_tasks(request), pk=task_pk)
     if request.method == "POST":
         form = SubtaskForm(request.POST, task=task)
         if form.is_valid():
@@ -112,7 +137,7 @@ def subtask_create(request, task_pk):
 
 
 def subtask_update(request, pk):
-    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    subtask = get_object_or_404(organization_subtasks(request), pk=pk)
     if request.method == "POST":
         form = SubtaskForm(request.POST, instance=subtask, task=subtask.task)
         if form.is_valid():
@@ -131,7 +156,7 @@ def subtask_update(request, pk):
 
 
 def subtask_delete(request, pk):
-    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    subtask = get_object_or_404(organization_subtasks(request), pk=pk)
     if request.method == "POST":
         subtask.delete()
         messages.success(request, f'Subtarefa "{subtask.title}" excluída.')
@@ -141,7 +166,7 @@ def subtask_delete(request, pk):
 
 @require_POST
 def subtask_toggle(request, pk):
-    subtask = get_object_or_404(Subtask.objects.select_related("task"), pk=pk)
+    subtask = get_object_or_404(organization_subtasks(request), pk=pk)
     try:
         subtask.toggle()
     except ValidationError as error:
@@ -159,7 +184,9 @@ def subtask_toggle(request, pk):
 
 @require_POST
 def task_complete(request, pk):
-    task = get_object_or_404(Task.objects.prefetch_related("dependencies__depends_on"), pk=pk)
+    task = get_object_or_404(
+        organization_tasks(request).prefetch_related("dependencies__depends_on", "subtasks"), pk=pk
+    )
     try:
         task.complete()
     except ValidationError as error:
@@ -171,7 +198,7 @@ def task_complete(request, pk):
 
 @require_POST
 def task_reopen(request, pk):
-    task = get_object_or_404(Task.objects.prefetch_related("dependents__task"), pk=pk)
+    task = get_object_or_404(organization_tasks(request).prefetch_related("dependents__task"), pk=pk)
     try:
         task.reopen()
     except ValidationError as error:
@@ -182,7 +209,7 @@ def task_reopen(request, pk):
 
 
 def dependency_create(request, task_pk):
-    task = get_object_or_404(Task.objects.select_related("project"), pk=task_pk)
+    task = get_object_or_404(organization_tasks(request).select_related("project"), pk=task_pk)
     if request.method == "POST":
         form = TaskDependencyForm(request.POST, task=task)
         if form.is_valid():
@@ -206,7 +233,12 @@ def dependency_create(request, task_pk):
 
 @require_POST
 def dependency_delete(request, pk):
-    dependency = get_object_or_404(TaskDependency.objects.select_related("task", "depends_on"), pk=pk)
+    dependency = get_object_or_404(
+        TaskDependency.objects.select_related("task", "depends_on").filter(
+            task__project__organization=current_organization(request)
+        ),
+        pk=pk,
+    )
     dependency.delete()
     messages.success(
         request,

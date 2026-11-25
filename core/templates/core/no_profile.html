@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Sem organização &middot; Grello{% endblock %}
+
+{% block page_title %}Seu usuário não pertence a nenhuma organização{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <p>
+            Para usar o Grello, cada usuário precisa de um <strong>perfil</strong> que o vincule a uma
+            organização e defina o seu papel (administrador ou operador).
+        </p>
+        {% if user.is_staff %}
+            <p>Como você tem acesso ao Django Admin, pode criar o seu perfil por lá.</p>
+            <div class="form-actions">
+                <a href="{% url 'admin:core_profile_add' %}" class="btn btn-primary">Criar perfil no Admin</a>
+            </div>
+        {% else %}
+            <p>Peça ao administrador do sistema para cadastrar o seu perfil.</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso negado &middot; Grello{% endblock %}
+
+{% block page_title %}Acesso negado{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <p>{{ exception|default:"Você não tem permissão para acessar esta página." }}</p>
+        <div class="form-actions">
+            <a href="{% url 'home' %}" class="btn btn-ghost">Voltar ao início</a>
+        </div>
+    </div>
+{% endblock %}

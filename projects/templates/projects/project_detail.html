@@ -6,8 +6,10 @@
 
 {% block page_actions %}
     <a href="{% url 'tasks:create' %}?project={{ project.pk }}" class="btn btn-primary">Nova tarefa</a>
-    <a href="{% url 'projects:update' project.pk %}" class="btn btn-ghost">Editar</a>
-    <a href="{% url 'projects:delete' project.pk %}" class="btn btn-ghost">Excluir</a>
+    {% if is_org_admin %}
+        <a href="{% url 'projects:update' project.pk %}" class="btn btn-ghost">Editar</a>
+        <a href="{% url 'projects:delete' project.pk %}" class="btn btn-ghost">Excluir</a>
+    {% endif %}
     <a href="{% url 'projects:list' %}" class="btn btn-ghost">Voltar</a>
 {% endblock %}
 
@@ -33,6 +35,41 @@
             </dd>
         </dl>
     </div>
+
+    <div class="section-head">
+        <h2>Sprints</h2>
+        {% if is_org_admin %}<a href="{% url 'projects:sprint_create' project.pk %}" class="btn btn-ghost btn-sm">Nova sprint</a>{% endif %}
+    </div>
+
+    {% if project.sprints.all %}
+        <div class="card card-flush table-wrapper">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Sprint</th>
+                        <th>Período</th>
+                        <th>Situação</th>
+                        <th>Progresso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sprint in project.sprints.all %}
+                        <tr>
+                            <td><a href="{% url 'projects:sprint_detail' sprint.pk %}">{{ sprint.name }}</a></td>
+                            <td>{{ sprint.start_date|date:"d/m/Y" }} a {{ sprint.end_date|date:"d/m/Y" }}</td>
+                            <td>{% include "projects/partials/_sprint_state_badge.html" with sprint=sprint %}</td>
+                            <td>{{ sprint.completed_task_count }} de {{ sprint.task_count }} tarefas ({{ sprint.progress_percent }}%)</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card empty">
+            <p>Este projeto ainda não tem sprints. As tarefas ficam no backlog.</p>
+            {% if is_org_admin %}<a href="{% url 'projects:sprint_create' project.pk %}" class="btn btn-primary">Planejar a primeira sprint</a>{% endif %}
+        </div>
+    {% endif %}
 
     <div class="section-head">
         <h2>Tarefas do projeto</h2>

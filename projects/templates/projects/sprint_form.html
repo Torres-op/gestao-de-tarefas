@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} &middot; {{ project.name }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">Projeto: {{ project.name }}</p>
+{% endblock %}
+
+{% block content %}
+    {% url 'projects:detail' project.pk as cancel_url %}
+    {% include "partials/_form.html" with submit_label=submit_label cancel_url=cancel_url %}
+{% endblock %}

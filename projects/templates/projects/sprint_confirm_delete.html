@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir sprint &middot; {{ sprint.project.name }}{% endblock %}
+
+{% block page_title %}Excluir sprint{% endblock %}
+
+{% block content %}
+    {% url 'projects:sprint_detail' sprint.pk as cancel_url %}
+    {% include "partials/_confirm_delete.html" with object_type="a sprint" object_label=sprint.name confirm_warning="As tarefas desta sprint não serão excluídas: elas voltam para o backlog do projeto." cancel_url=cancel_url %}
+{% endblock %}

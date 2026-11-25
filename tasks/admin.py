@@ -16,8 +16,9 @@ class TaskDependencyInline(admin.TabularInline):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ["title", "project", "assignee", "status", "due_date"]
-    list_filter = ["status", "project"]
+    list_display = ["title", "project", "sprint", "assignee", "status", "due_date"]
+    list_filter = ["project__organization", "status", "project"]
+    list_select_related = ["project", "sprint", "assignee"]
     search_fields = ["title", "description"]
     inlines = [SubtaskInline, TaskDependencyInline]
 

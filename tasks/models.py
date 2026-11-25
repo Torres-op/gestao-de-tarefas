@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from members.models import Member
-from projects.models import Project
+from projects.models import Project, Sprint
 
 
 class Task(models.Model):
@@ -27,10 +27,19 @@ class Task(models.Model):
         blank=True,
         related_name="tasks",
     )
+    sprint = models.ForeignKey(
+        Sprint,
+        verbose_name="Sprint",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
+    )
     title = models.CharField("Título", max_length=150)
     description = models.TextField("Descrição", blank=True)
     status = models.CharField("Status", max_length=20, choices=Status.choices, default=Status.PENDING)
     due_date = models.DateField("Prazo", null=True, blank=True)
+    started_at = models.DateTimeField("Iniciada em", null=True, blank=True)
     completed_at = models.DateTimeField("Concluída em", null=True, blank=True)
     created_at = models.DateTimeField("Criada em", auto_now_add=True)
     updated_at = models.DateTimeField("Atualizada em", auto_now=True)
@@ -47,13 +56,19 @@ class Task(models.Model):
         return reverse("tasks:detail", kwargs={"pk": self.pk})
 
     def save(self, *args, **kwargs):
+        now = timezone.now()
         if self.status == self.Status.DONE and self.completed_at is None:
-            self.completed_at = timezone.now()
+            self.completed_at = now
         elif self.status != self.Status.DONE:
             self.completed_at = None
+        if self.status == self.Status.PENDING:
+            self.started_at = None
+        elif self.started_at is None:
+            self.started_at = self.completed_at or now
         super().save(*args, **kwargs)
 
     def clean(self):
+        self.validate_relations()
         if not self.pk:
             return
         if self.status == self.Status.DONE:
@@ -62,6 +77,17 @@ class Task(models.Model):
             reason = self.reopening_reason()
         if reason:
             raise ValidationError({"status": reason})
+
+    def validate_relations(self):
+        if self.project_id is None:
+            return
+        errors = {}
+        if self.sprint_id and self.sprint.project_id != self.project_id:
+            errors["sprint"] = "A sprint precisa pertencer ao mesmo projeto da tarefa."
+        if self.assignee_id and self.assignee.organization_id != self.project.organization_id:
+            errors["assignee"] = "O responsável precisa pertencer à mesma organização do projeto."
+        if errors:
+            raise ValidationError(errors)
 
     def pending_dependencies(self):
         return [
