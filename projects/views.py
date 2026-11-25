@@ -6,6 +6,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 
 from core.permissions import AdminRequiredMixin, OrganizationFormMixin, OrganizationScopedMixin, admin_required
 from core.tenancy import current_organization
+from tasks.queries import task_table_prefetches
 
 from .forms import ProjectForm, SprintForm
 from .models import Project, Sprint
@@ -22,9 +23,7 @@ class ProjectDetailView(OrganizationScopedMixin, DetailView):
     model = Project
     template_name = "projects/project_detail.html"
     context_object_name = "project"
-    queryset = Project.objects.prefetch_related(
-        "tasks__assignee", "tasks__subtasks", "tasks__dependencies__depends_on", "sprints__tasks"
-    )
+    queryset = Project.objects.prefetch_related(*task_table_prefetches("tasks", "assignee"), "sprints__tasks")
 
 
 class ProjectCreateView(AdminRequiredMixin, OrganizationFormMixin, SuccessMessageMixin, CreateView):
@@ -69,7 +68,7 @@ class SprintDetailView(DetailView):
 
     def get_queryset(self):
         return organization_sprints(self.request).prefetch_related(
-            "tasks__assignee", "tasks__subtasks", "tasks__dependencies__depends_on", "tasks__project"
+            *task_table_prefetches("tasks", "assignee", "project")
         )
 
 

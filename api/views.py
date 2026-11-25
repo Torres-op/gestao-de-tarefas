@@ -8,6 +8,7 @@ from core.tenancy import current_organization
 from members.models import Member
 from projects.models import Project, Sprint
 from tasks.models import Subtask, Task, TaskDependency
+from tasks.queries import dependencies_prefetch, dependents_prefetch
 
 from .permissions import HasOrganizationProfile, IsOrgAdminOrReadOnly, IsOrgAdminToDelete
 from .serializers import (
@@ -70,7 +71,7 @@ class SprintViewSet(OrganizationViewSet):
 
 class TaskViewSet(OrganizationViewSet):
     queryset = Task.objects.select_related("project", "sprint", "assignee").prefetch_related(
-        "subtasks", "dependencies__depends_on", "dependents__task"
+        "subtasks", dependencies_prefetch(), dependents_prefetch()
     )
     serializer_class = TaskSerializer
     permission_classes = [*OrganizationViewSet.permission_classes, IsOrgAdminToDelete]

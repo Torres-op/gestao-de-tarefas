@@ -48,6 +48,11 @@ class Task(models.Model):
         verbose_name = "Tarefa"
         verbose_name_plural = "Tarefas"
         ordering = ["due_date", "title"]
+        indexes = [
+            models.Index(fields=["project", "status"], name="task_project_status_idx"),
+            models.Index(fields=["status", "completed_at"], name="task_status_completed_idx"),
+            models.Index(fields=["created_at"], name="task_created_at_idx"),
+        ]
 
     def __str__(self):
         return self.title
@@ -86,8 +91,24 @@ class Task(models.Model):
             errors["sprint"] = "A sprint precisa pertencer ao mesmo projeto da tarefa."
         if self.assignee_id and self.assignee.organization_id != self.project.organization_id:
             errors["assignee"] = "O responsável precisa pertencer à mesma organização do projeto."
+        if self.pk and self.changed_project() and (self.dependencies.exists() or self.dependents.exists()):
+            errors["project"] = (
+                "Uma tarefa com dependências não pode mudar de projeto. Remova as dependências antes."
+            )
         if errors:
             raise ValidationError(errors)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_project_id = instance.__dict__.get("project_id")
+        return instance
+
+    def changed_project(self):
+        original_project_id = getattr(self, "_loaded_project_id", None)
+        if original_project_id is None:
+            original_project_id = Task.objects.filter(pk=self.pk).values_list("project_id", flat=True).first()
+        return original_project_id is not None and original_project_id != self.project_id
 
     def pending_dependencies(self):
         return [

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.db.models import Avg, Count, DurationField, Exists, ExpressionWrapper, F, OuterRef, Q
 from django.db.models.functions import TruncDate, TruncMonth, TruncWeek
@@ -46,8 +46,16 @@ def resolve_period(start=None, end=None, today=None):
     return start, end
 
 
+def day_start(day):
+    return datetime.combine(day, time.min, tzinfo=timezone.get_current_timezone())
+
+
+def within_days(field, start, end):
+    return Q(**{f"{field}__gte": day_start(start), f"{field}__lt": day_start(end + timedelta(days=1))})
+
+
 def completed_between(start, end):
-    return Q(status=DONE, completed_at__date__gte=start, completed_at__date__lte=end)
+    return Q(status=DONE) & within_days("completed_at", start, end)
 
 
 def overdue_condition(today):
@@ -141,7 +149,7 @@ def flow_series(queryset, start, end):
     trunc = TruncMonth if monthly else TruncWeek
     queryset = queryset.order_by()
     created = (
-        queryset.filter(created_at__date__gte=start, created_at__date__lte=end)
+        queryset.filter(within_days("created_at", start, end))
         .annotate(bucket=trunc("created_at"))
         .values("bucket")
         .annotate(total=Count("pk"))
@@ -358,8 +366,8 @@ def sprint_burndown(sprint, today=None, queryset=None):
 
 
 def tasks_active_in_period(queryset, start, end):
-    return queryset.filter(created_at__date__lte=end).filter(
-        Q(completed_at__isnull=True) | Q(completed_at__date__gte=start)
+    return queryset.filter(created_at__lt=day_start(end + timedelta(days=1))).filter(
+        Q(completed_at__isnull=True) | Q(completed_at__gte=day_start(start))
     )
 
 

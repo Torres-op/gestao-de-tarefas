@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.permissions import AdminRequiredMixin, OrganizationFormMixin, OrganizationScopedMixin
+from tasks.queries import task_table_prefetches
 
 from .forms import MemberForm
 from .models import Member
@@ -19,9 +20,7 @@ class MemberDetailView(OrganizationScopedMixin, DetailView):
     model = Member
     template_name = "members/member_detail.html"
     context_object_name = "member"
-    queryset = Member.objects.prefetch_related(
-        "tasks__project", "tasks__subtasks", "tasks__dependencies__depends_on"
-    )
+    queryset = Member.objects.prefetch_related(*task_table_prefetches("tasks", "project"))
 
 
 class MemberCreateView(AdminRequiredMixin, OrganizationFormMixin, SuccessMessageMixin, CreateView):

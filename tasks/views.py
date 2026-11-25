@@ -11,6 +11,7 @@ from projects.models import Project, Sprint
 
 from .forms import SubtaskForm, TaskDependencyForm, TaskForm
 from .models import Subtask, Task, TaskDependency
+from .queries import dependencies_prefetch, dependents_prefetch
 
 
 def organization_tasks(request):
@@ -44,7 +45,7 @@ class TaskListView(OrganizationTaskMixin, ListView):
             super()
             .get_queryset()
             .select_related("project", "assignee", "sprint")
-            .prefetch_related("subtasks", "dependencies__depends_on")
+            .prefetch_related("subtasks", dependencies_prefetch())
         )
         project_id = self.get_selected_id("project")
         if project_id:
@@ -74,7 +75,7 @@ class TaskDetailView(OrganizationTaskMixin, DetailView):
     template_name = "tasks/task_detail.html"
     context_object_name = "task"
     queryset = Task.objects.select_related("project", "assignee", "sprint").prefetch_related(
-        "subtasks", "dependencies__depends_on", "dependents__task"
+        "subtasks", dependencies_prefetch(), dependents_prefetch()
     )
 
 
