@@ -283,7 +283,8 @@ FAST_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 def run_seed(*args):
     out = StringIO()
-    call_command("seed_demo", *args, stdout=out)
+    with override_settings(DEBUG=True):
+        call_command("seed_demo", *args, stdout=out)
     return out.getvalue()
 
 

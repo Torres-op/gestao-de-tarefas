@@ -1,7 +1,8 @@
 from datetime import datetime, time, timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -37,9 +38,20 @@ class Command(BaseCommand):
             action="store_true",
             help="Apaga as organizações de demonstração e seus dados antes de criar tudo de novo.",
         )
+        parser.add_argument(
+            "--allow-production",
+            action="store_true",
+            help="Permite rodar com DJANGO_DEBUG=False (os usuários de demonstração têm senha conhecida).",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
+        if not settings.DEBUG and not options["allow_production"]:
+            raise CommandError(
+                "O seed_demo cria usuários com senha conhecida e só roda com DJANGO_DEBUG=True. "
+                "Use --allow-production se tiver certeza."
+            )
+
         if options["reset"]:
             self.reset()
 
