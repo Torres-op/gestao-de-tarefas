@@ -4,6 +4,7 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 
 from core.forms import LoginForm
+from core.views import health
 
 admin.site.site_header = "Grello"
 admin.site.site_title = "Grello"
@@ -11,6 +12,7 @@ admin.site.index_title = "Administração"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("health/", health, name="health"),
     path(
         "accounts/login/",
         auth_views.LoginView.as_view(authentication_form=LoginForm, redirect_authenticated_user=True),

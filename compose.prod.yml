@@ -1,0 +1,63 @@
+# Ambiente de produção do Grello: gunicorn + WhiteNoise, DEBUG desligado e banco sem porta publicada.
+# Uso: docker compose -f compose.prod.yml --env-file .env.prod up -d --build
+#
+# Variáveis obrigatórias (o Compose recusa subir sem elas): DJANGO_SECRET_KEY e DB_PASSWORD.
+# Em produção real, o serviço fica atrás de um proxy reverso que termina o HTTPS
+# (Nginx, Caddy, Traefik ou o balanceador do provedor) e repassa para a porta 8000.
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-gestao_tarefas}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      target: prod
+    restart: unless-stopped
+    ports:
+      - "${WEB_HOST_PORT:-8000}:8000"
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?defina DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_SECURE_COOKIES: ${DJANGO_SECURE_COOKIES:-True}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-True}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-0}
+      DJANGO_SECURE_HSTS_PRELOAD: ${DJANGO_SECURE_HSTS_PRELOAD:-False}
+      DJANGO_LOGIN_MAX_ATTEMPTS: ${DJANGO_LOGIN_MAX_ATTEMPTS:-5}
+      DJANGO_LOGIN_LOCKOUT_SECONDS: ${DJANGO_LOGIN_LOCKOUT_SECONDS:-900}
+      DJANGO_BEHIND_HTTPS_PROXY: ${DJANGO_BEHIND_HTTPS_PROXY:-False}
+      DJANGO_DATABASE_CACHE: "True"
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-gestao_tarefas}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+    healthcheck:
+      # Mantenha "localhost" em DJANGO_ALLOWED_HOSTS para esta verificação interna funcionar.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata_prod:

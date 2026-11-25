@@ -20,6 +20,8 @@ def env_list(name, default=""):
 
 DEBUG = env_bool("DJANGO_DEBUG", False)
 
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if not DEBUG:
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -112,6 +115,19 @@ STATIC_URL = "static/"
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG or TESTING
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
+}
+
 LOGIN_URL = "login"
 
 LOGIN_REDIRECT_URL = "home"
@@ -119,8 +135,6 @@ LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 
 AUTHENTICATION_BACKENDS = ["core.auth.RateLimitedModelBackend"]
-
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 
 LOGIN_MAX_ATTEMPTS = 1000 if TESTING else int(os.getenv("DJANGO_LOGIN_MAX_ATTEMPTS", "5"))
 
@@ -138,7 +152,16 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         *(["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
     ],
+    "DEFAULT_PAGINATION_CLASS": "api.pagination.StandardPagination",
 }
+
+if env_bool("DJANGO_DATABASE_CACHE", False):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
 
 LOGGING = {
     "version": 1,
@@ -172,6 +195,7 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", True)
     CSRF_COOKIE_SECURE = env_bool("DJANGO_SECURE_COOKIES", True)
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+    SECURE_REDIRECT_EXEMPT = [r"^health/$"]
     SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
     SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0 and env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
