@@ -9,7 +9,7 @@ expuserem herda o que o model já faz, então os pontos frágeis precisam ser co
 | 1 | Sem autenticação nem controle de acesso | Corrigido na P2 |
 | 2 | E-mail de membro único no banco inteiro | Corrigido na P2 |
 | 3 | Nenhum teste automatizado | Corrigido na P2 |
-| 4 | Configuração insegura por padrão | Pendente (Fase 5) |
+| 4 | Configuração insegura por padrão | Corrigido na P2 |
 | 5 | Listagens sem paginação | Pendente (Fase 6) |
 
 ## 1. Sem autenticação nem controle de acesso
@@ -45,8 +45,12 @@ API e as métricas do dashboard.
 variável não está definida. Esquecer o `.env` em produção deixaria o sistema com o modo debug
 ligado e uma chave conhecida.
 
-**Plano:** inverter os padrões (`DEBUG` falso e erro ao iniciar sem `SECRET_KEY` fora do modo de
-desenvolvimento) e ativar as configurações de segurança do Django na etapa de segurança e testes.
+**Correção:** `DEBUG` agora é falso quando a variável não está definida, e o sistema se recusa a
+iniciar sem `DJANGO_SECRET_KEY` fora do modo de desenvolvimento. Em produção, os cookies só
+trafegam por HTTPS, o HTTP é redirecionado para HTTPS e o HSTS pode ser ligado por variável de
+ambiente. O `manage.py check --deploy` passa sem avisos com a configuração de produção, e
+testes automatizados garantem esse comportamento. O Docker Compose, que é de desenvolvimento,
+continua com `DEBUG` ligado por padrão.
 
 ## 5. Listagens sem paginação
 
