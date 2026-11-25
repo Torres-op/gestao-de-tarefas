@@ -84,6 +84,18 @@ class Command(BaseCommand):
     def moment(self, offset, hour):
         return timezone.make_aware(datetime.combine(self.day(offset), time(hour)))
 
+    def project(self, organization, name, description, created, start, due):
+        project = Project.objects.create(
+            organization=organization,
+            name=name,
+            description=description,
+            start_date=self.day(start),
+            due_date=self.day(due),
+        )
+        Project.objects.filter(pk=project.pk).update(created_at=self.moment(created, 8))
+        project.refresh_from_db()
+        return project
+
     def sprint(self, project, name, start, end, goal):
         return Sprint.objects.create(
             project=project, name=name, goal=goal, start_date=self.day(start), end_date=self.day(end)
@@ -111,12 +123,13 @@ class Command(BaseCommand):
         carla = Member.objects.create(organization=organization, name="Carla Dias", email="carla@exemplo.com", role="Designer")
         diego = Member.objects.create(organization=organization, name="Diego Alves", email="diego@exemplo.com", role="Desenvolvedor")
 
-        project = Project.objects.create(
-            organization=organization,
-            name="Sistema de Matrículas",
-            description="Portal de matrículas online para a secretaria acadêmica.",
-            start_date=self.day(-35),
-            due_date=self.day(60),
+        project = self.project(
+            organization,
+            "Sistema de Matrículas",
+            "Portal de matrículas online para a secretaria acadêmica.",
+            created=-40,
+            start=-35,
+            due=60,
         )
         s1 = self.sprint(project, "Sprint 1", -35, -22, "Preparar a base do projeto e o ambiente.")
         s2 = self.sprint(project, "Sprint 2", -21, -8, "Fechar requisitos e a arquitetura.")
@@ -166,12 +179,13 @@ class Command(BaseCommand):
         ana = Member.objects.create(organization=organization, name="Ana Pereira", email="ana@exemplo.com", role="Gerente de projetos")
         eduardo = Member.objects.create(organization=organization, name="Eduardo Rocha", email="eduardo@exemplo.com", role="Desenvolvedor")
 
-        project = Project.objects.create(
-            organization=organization,
-            name="Portal do Cliente",
-            description="Área do cliente para acompanhar contratos e chamados.",
-            start_date=self.day(-18),
-            due_date=self.day(45),
+        project = self.project(
+            organization,
+            "Portal do Cliente",
+            "Área do cliente para acompanhar contratos e chamados.",
+            created=-20,
+            start=-18,
+            due=45,
         )
         s1 = self.sprint(project, "Sprint 1", -18, -5, "Login e listagem de contratos.")
         s2 = self.sprint(project, "Sprint 2", -4, 9, "Abertura e acompanhamento de chamados.")

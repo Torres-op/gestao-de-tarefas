@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from members.models import Member
 from projects.models import Project, Sprint
+from tasks.forms import TaskForm
 from tasks.models import Subtask, Task, TaskDependency
 
 from .context_processors import organization as organization_context
@@ -346,6 +347,21 @@ class SeedDemoContentTests(TestCase):
                 task.validate_relations()
                 self.assertEqual(task.completed_at is not None, task.is_done())
                 self.assertEqual(task.started_at is None, task.status == Task.Status.PENDING)
+
+    def test_every_seeded_task_can_be_edited_through_the_form(self):
+        for task in Task.objects.select_related("project__organization"):
+            data = {
+                "project": task.project_id,
+                "sprint": task.sprint_id or "",
+                "title": task.title,
+                "description": task.description,
+                "assignee": task.assignee_id or "",
+                "status": task.status,
+                "due_date": task.due_date.isoformat() if task.due_date else "",
+            }
+            form = TaskForm(data=data, instance=task, organization=task.project.organization)
+            with self.subTest(task=task.title):
+                self.assertTrue(form.is_valid(), form.errors)
 
     def test_same_member_email_exists_in_both_organizations(self):
         self.assertEqual(Member.objects.filter(email="ana@exemplo.com").count(), 2)
