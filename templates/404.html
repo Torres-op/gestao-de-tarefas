@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Página não encontrada &middot; Grello{% endblock %}
+
+{% block page_title %}Página não encontrada{% endblock %}
+
+{% block content %}
+    <div class="card error-page">
+        <p class="error-code">404</p>
+        <p>O endereço que você tentou acessar não existe ou não está disponível para a sua organização.</p>
+        <div class="form-actions">
+            <a href="{% url 'home' %}" class="btn btn-primary">Voltar ao início</a>
+        </div>
+    </div>
+{% endblock %}
