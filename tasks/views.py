@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from core.pagination import LenientPaginationMixin
 from core.permissions import AdminRequiredMixin, OrganizationFormMixin
 from core.tenancy import current_organization
 from projects.models import Project, Sprint
@@ -27,8 +28,9 @@ class OrganizationTaskMixin:
         return super().get_queryset().filter(project__organization=current_organization(self.request))
 
 
-class TaskListView(OrganizationTaskMixin, ListView):
+class TaskListView(OrganizationTaskMixin, LenientPaginationMixin, ListView):
     model = Task
+    paginate_by = 25
     template_name = "tasks/task_list.html"
     context_object_name = "tasks"
 

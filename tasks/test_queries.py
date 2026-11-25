@@ -8,10 +8,13 @@ from core.testing import QueryCountScenario
 class TaskQueryCountTests(QueryCountScenario, TestCase):
     def test_filtered_task_list(self):
         url = f"{reverse('tasks:list')}?project={self.project.pk}&sprint={self.sprint.pk}&status=in_progress"
-        self.assertQueriesStayAt(8, url)
+        self.assertQueriesStayAt(9, url)
 
     def test_task_list_as_operator(self):
-        self.assertQueriesStayAt(8, reverse("tasks:list"), user=self.operator)
+        self.assertQueriesStayAt(9, reverse("tasks:list"), user=self.operator)
+
+    def test_task_list_second_page(self):
+        self.assertQueriesStayAt(9, f"{reverse('tasks:list')}?page=2")
 
     def test_task_detail_with_dependencies_dependents_and_subtasks(self):
         self.assertQueriesStayAt(7, reverse("tasks:detail", args=[self.root.pk]))

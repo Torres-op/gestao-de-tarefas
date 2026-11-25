@@ -52,9 +52,15 @@
 
     {% if tasks %}
         {% include "tasks/partials/_task_table.html" with tasks=tasks show_project=True %}
+        {% include "partials/_pagination.html" with item_label="tarefas" %}
     {% else %}
         <div class="card empty">
-            <p>Nenhuma tarefa encontrada com os filtros selecionados.</p>
+            {% if selected_project_id or selected_sprint_id or selected_status %}
+                <p>Nenhuma tarefa encontrada com os filtros selecionados.</p>
+                <a href="{% url 'tasks:list' %}" class="btn btn-ghost">Limpar filtros</a>
+            {% else %}
+                <p>Nenhuma tarefa cadastrada ainda.</p>
+            {% endif %}
             <a href="{% url 'tasks:create' %}" class="btn btn-primary">Criar uma tarefa</a>
         </div>
     {% endif %}

@@ -6,7 +6,10 @@ from core.testing import QueryCountScenario
 
 class MemberQueryCountTests(QueryCountScenario, TestCase):
     def test_member_list(self):
-        self.assertQueriesStayAt(4, reverse("members:list"))
+        self.assertQueriesStayAt(5, reverse("members:list"))
+
+    def test_member_list_second_page(self):
+        self.assertQueriesStayAt(5, f"{reverse('members:list')}?page=2", large=25)
 
     def test_member_detail(self):
         self.assertQueriesStayAt(7, reverse("members:detail", args=[self.member.pk]))

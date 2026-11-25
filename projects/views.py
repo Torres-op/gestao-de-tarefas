@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from core.pagination import LenientPaginationMixin
 from core.permissions import AdminRequiredMixin, OrganizationFormMixin, OrganizationScopedMixin, admin_required
 from core.tenancy import current_organization
 from tasks.queries import task_table_prefetches
@@ -12,8 +13,9 @@ from .forms import ProjectForm, SprintForm
 from .models import Project, Sprint
 
 
-class ProjectListView(OrganizationScopedMixin, ListView):
+class ProjectListView(OrganizationScopedMixin, LenientPaginationMixin, ListView):
     model = Project
+    paginate_by = 12
     template_name = "projects/project_list.html"
     context_object_name = "projects"
     queryset = Project.objects.prefetch_related("tasks")

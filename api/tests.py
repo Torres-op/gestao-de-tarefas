@@ -85,7 +85,7 @@ class OrganizationIsolationTests(ApiTestCase):
             with self.subTest(resource=resource):
                 response = self.client.get(f"/api/{resource}/")
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertEqual([item["id"] for item in response.json()], [expected_pk])
+                self.assertEqual([item["id"] for item in response.json()["results"]], [expected_pk])
 
     def test_retrieve_from_other_organization_returns_404(self):
         cases = {
@@ -120,11 +120,11 @@ class OrganizationIsolationTests(ApiTestCase):
     def test_task_list_filters(self):
         Task.objects.create(project=self.project, title="Outra", status=Task.Status.DONE, sprint=self.sprint)
         response = self.client.get("/api/tasks/", {"status": "done"})
-        self.assertEqual([item["title"] for item in response.json()], ["Outra"])
+        self.assertEqual([item["title"] for item in response.json()["results"]], ["Outra"])
         response = self.client.get("/api/tasks/", {"sprint": self.sprint.pk})
-        self.assertEqual([item["title"] for item in response.json()], ["Outra"])
+        self.assertEqual([item["title"] for item in response.json()["results"]], ["Outra"])
         response = self.client.get("/api/tasks/", {"assignee": self.member.pk})
-        self.assertEqual([item["id"] for item in response.json()], [self.task.pk])
+        self.assertEqual([item["id"] for item in response.json()["results"]], [self.task.pk])
 
 
 class RolePermissionTests(ApiTestCase):
@@ -329,7 +329,7 @@ class QueryCountTests(ApiTestCase):
         with CaptureQueriesContext(connection) as context:
             response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        return len(context.captured_queries), len(response.json())
+        return len(context.captured_queries), len(response.json()["results"])
 
     def test_task_list_has_no_n_plus_one(self):
         self.client.force_authenticate(self.operator)
@@ -350,3 +350,63 @@ class QueryCountTests(ApiTestCase):
                 self.create_tasks(5)
                 queries, _ = self.count_list_queries(url)
                 self.assertEqual(queries, baseline)
+
+
+class PaginationTests(ApiTestCase):
+    def setUp(self):
+        self.client.force_authenticate(self.operator)
+
+    def create_members(self, amount):
+        Member.objects.bulk_create(
+            Member(organization=self.org, name=f"Pessoa {index:03d}", email=f"pessoa{index}@labs.com")
+            for index in range(amount)
+        )
+
+    def test_list_uses_page_envelope_with_default_size(self):
+        self.create_members(59)
+        response = self.client.get("/api/members/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(set(data), {"count", "next", "previous", "results"})
+        self.assertEqual(data["count"], 60)
+        self.assertEqual(len(data["results"]), 50)
+        self.assertIsNone(data["previous"])
+        self.assertIn("page=2", data["next"])
+        second = self.client.get(data["next"]).json()
+        self.assertEqual(len(second["results"]), 10)
+        self.assertIsNone(second["next"])
+        self.assertIsNotNone(second["previous"])
+
+    def test_count_ignores_other_organizations(self):
+        Member.objects.create(organization=self.other_org, name="Caio", email="caio@acme.com")
+        data = self.client.get("/api/members/").json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual([item["id"] for item in data["results"]], [self.member.pk])
+
+    def test_page_size_query_param(self):
+        self.create_members(14)
+        data = self.client.get("/api/members/", {"page_size": 10}).json()
+        self.assertEqual(data["count"], 15)
+        self.assertEqual(len(data["results"]), 10)
+        self.assertIn("page_size=10", data["next"])
+        self.assertIn("page=2", data["next"])
+
+    def test_page_size_is_capped_at_200(self):
+        self.create_members(249)
+        data = self.client.get("/api/members/", {"page_size": 1000}).json()
+        self.assertEqual(data["count"], 250)
+        self.assertEqual(len(data["results"]), 200)
+
+    def test_page_out_of_range_returns_404(self):
+        for page in ("999", "abc"):
+            with self.subTest(page=page):
+                response = self.client.get("/api/members/", {"page": page})
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertIn("detail", response.json())
+
+    def test_filters_are_kept_in_next_link(self):
+        for index in range(3):
+            Task.objects.create(project=self.project, title=f"Feita {index}", status=Task.Status.DONE)
+        data = self.client.get("/api/tasks/", {"status": "done", "page_size": 2}).json()
+        self.assertEqual(data["count"], 3)
+        self.assertIn("status=done", data["next"])

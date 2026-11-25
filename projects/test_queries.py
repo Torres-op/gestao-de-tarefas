@@ -6,7 +6,10 @@ from core.testing import QueryCountScenario
 
 class ProjectQueryCountTests(QueryCountScenario, TestCase):
     def test_project_list(self):
-        self.assertQueriesStayAt(5, reverse("projects:list"))
+        self.assertQueriesStayAt(6, reverse("projects:list"))
+
+    def test_project_list_second_page(self):
+        self.assertQueriesStayAt(6, f"{reverse('projects:list')}?page=2")
 
     def test_project_detail(self):
         self.assertQueriesStayAt(9, reverse("projects:detail", args=[self.project.pk]))

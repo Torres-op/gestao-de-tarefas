@@ -3,6 +3,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from core.pagination import LenientPaginationMixin
 from core.permissions import AdminRequiredMixin, OrganizationFormMixin, OrganizationScopedMixin
 from tasks.queries import task_table_prefetches
 
@@ -10,8 +11,9 @@ from .forms import MemberForm
 from .models import Member
 
 
-class MemberListView(OrganizationScopedMixin, ListView):
+class MemberListView(OrganizationScopedMixin, LenientPaginationMixin, ListView):
     model = Member
+    paginate_by = 20
     template_name = "members/member_list.html"
     context_object_name = "members"
 

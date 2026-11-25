@@ -1,0 +1,20 @@
+{% if is_paginated %}
+    <nav class="pagination" aria-label="Paginação">
+        {% if page_obj.has_previous %}
+            <a href="{% querystring page=page_obj.previous_page_number %}" class="btn btn-ghost btn-sm" rel="prev">&larr; Anterior</a>
+        {% else %}
+            <span class="btn btn-ghost btn-sm pagination-disabled" aria-disabled="true">&larr; Anterior</span>
+        {% endif %}
+
+        <p class="pagination-status">
+            Página {{ page_obj.number }} de {{ paginator.num_pages }}
+            <span class="muted">&middot; {{ paginator.count }} {{ item_label|default:"itens" }} no total</span>
+        </p>
+
+        {% if page_obj.has_next %}
+            <a href="{% querystring page=page_obj.next_page_number %}" class="btn btn-ghost btn-sm" rel="next">Próxima &rarr;</a>
+        {% else %}
+            <span class="btn btn-ghost btn-sm pagination-disabled" aria-disabled="true">Próxima &rarr;</span>
+        {% endif %}
+    </nav>
+{% endif %}
