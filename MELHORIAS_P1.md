@@ -10,7 +10,7 @@ expuserem herda o que o model já faz, então os pontos frágeis precisam ser co
 | 2 | E-mail de membro único no banco inteiro | Corrigido na P2 |
 | 3 | Nenhum teste automatizado | Corrigido na P2 |
 | 4 | Configuração insegura por padrão | Corrigido na P2 |
-| 5 | Listagens sem paginação | Pendente (Fase 6) |
+| 5 | Listagens sem paginação | Corrigido na P2 |
 
 ## 1. Sem autenticação nem controle de acesso
 
@@ -58,4 +58,7 @@ As listagens de projetos, tarefas e membros carregam todos os registros de uma v
 de um trabalho acadêmico não faz diferença, mas a API e o crescimento das organizações tornam isso
 um problema.
 
-**Plano:** `paginate_by` nas `ListView` e paginação padrão na API, na etapa de polimento.
+**Correção:** as listas de projetos (12 por página), membros (20) e tarefas (25) são paginadas,
+mantendo os filtros nos links de página, e uma página inválida mostra a primeira ou a última em
+vez de dar erro. A API devolve as listas no formato `{"count", "next", "previous", "results"}`,
+com 50 itens por padrão e `?page_size=` até 200.
