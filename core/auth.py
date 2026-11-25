@@ -23,11 +23,7 @@ def is_locked(request, username):
 
 def register_failure(request, username):
     key = attempts_key(request, username)
-    cache.add(key, 0, settings.LOGIN_LOCKOUT_SECONDS)
-    try:
-        cache.incr(key)
-    except ValueError:
-        cache.set(key, 1, settings.LOGIN_LOCKOUT_SECONDS)
+    cache.set(key, cache.get(key, 0) + 1, settings.LOGIN_LOCKOUT_SECONDS)
 
 
 def clear_failures(request, username):

@@ -1,5 +1,6 @@
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
 
 from members.models import Member
 from projects.models import Project, Sprint
@@ -40,7 +41,7 @@ class TaskForm(forms.ModelForm):
         due_date = cleaned_data.get("due_date")
 
         if project and due_date:
-            if due_date < project.created_at.date():
+            if due_date < timezone.localdate(project.created_at):
                 raise forms.ValidationError("O prazo não pode ser anterior a criação do projeto")
 
         return cleaned_data
