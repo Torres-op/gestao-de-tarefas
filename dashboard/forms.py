@@ -4,6 +4,8 @@ from django import forms
 
 from projects.models import Project, Sprint
 
+from .metrics import resolve_period
+
 DATE_INPUT_FORMATS = ["%Y-%m-%d", "%d/%m/%Y"]
 MIN_DATE = date(2000, 1, 1)
 MAX_DATE = date(2100, 12, 31)
@@ -38,11 +40,12 @@ class PeriodForm(forms.Form):
         cleaned_data = super().clean()
         start = cleaned_data.get("start")
         end = cleaned_data.get("end")
-        if start and end:
-            if end < start:
-                self.add_error("end", "A data final não pode ser anterior à data inicial.")
-            elif (end - start).days >= MAX_PERIOD_DAYS:
-                self.add_error("end", "O período pode ter no máximo 3 anos.")
+        if start and end and end < start:
+            self.add_error("end", "A data final não pode ser anterior à data inicial.")
+        elif not self.errors:
+            effective_start, effective_end = resolve_period(start, end)
+            if (effective_end - effective_start).days >= MAX_PERIOD_DAYS:
+                self.add_error("end" if end else "start", "O período pode ter no máximo 3 anos.")
         return cleaned_data
 
 

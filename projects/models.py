@@ -1,9 +1,13 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import OrganizationOwned
+
+MAX_SPRINT_DAYS = 60
 
 
 class Project(OrganizationOwned):
@@ -69,6 +73,10 @@ class Sprint(models.Model):
                 condition=models.Q(end_date__gte=models.F("start_date")),
                 name="sprint_end_after_start",
             ),
+            models.CheckConstraint(
+                condition=models.Q(end_date__lte=models.F("start_date") + timedelta(days=MAX_SPRINT_DAYS - 1)),
+                name="sprint_max_duration",
+            ),
         ]
 
     def __str__(self):
@@ -78,12 +86,31 @@ class Sprint(models.Model):
         return reverse("projects:sprint_detail", kwargs={"pk": self.pk})
 
     def clean(self):
-        if self.start_date and self.end_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "O fim da sprint não pode ser anterior ao início."})
+        if self.start_date and self.end_date:
+            if self.end_date < self.start_date:
+                raise ValidationError({"end_date": "O fim da sprint não pode ser anterior ao início."})
+            if self.duration_days() > MAX_SPRINT_DAYS:
+                raise ValidationError({"end_date": f"Uma sprint pode durar no máximo {MAX_SPRINT_DAYS} dias."})
+        if self.pk and self.changed_project() and self.tasks.exists():
+            raise ValidationError(
+                {"project": "Uma sprint com tarefas não pode mudar de projeto. Mova as tarefas antes."}
+            )
         if self.project_id and self.name:
             duplicated = Sprint.objects.filter(project_id=self.project_id, name=self.name).exclude(pk=self.pk)
             if duplicated.exists():
                 raise ValidationError({"name": "Já existe uma sprint com este nome neste projeto."})
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_project_id = instance.__dict__.get("project_id")
+        return instance
+
+    def changed_project(self):
+        original_project_id = getattr(self, "_loaded_project_id", None)
+        if original_project_id is None:
+            original_project_id = Sprint.objects.filter(pk=self.pk).values_list("project_id", flat=True).first()
+        return original_project_id is not None and original_project_id != self.project_id
 
     def state(self, today=None):
         today = today or timezone.localdate()

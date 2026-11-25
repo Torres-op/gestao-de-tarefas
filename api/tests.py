@@ -286,9 +286,10 @@ class TaskRulesTests(ApiTestCase):
 
     def test_sprint_from_other_project_returns_400(self):
         other = Project.objects.create(organization=self.org, name="Interno")
-        response = self.client.patch(self.detail("tasks", self.task.pk), {"project": other.pk})
+        loose = Task.objects.create(project=self.task.project, title="Avulsa")
+        response = self.client.patch(self.detail("tasks", loose.pk), {"project": other.pk})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response = self.client.patch(self.detail("tasks", self.task.pk), {"sprint": self.sprint.pk})
+        response = self.client.patch(self.detail("tasks", loose.pk), {"sprint": self.sprint.pk})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("sprint", response.json())
 
