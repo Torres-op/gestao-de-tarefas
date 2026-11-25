@@ -33,6 +33,18 @@ class TaskForm(forms.ModelForm):
         self.fields["assignee"].queryset = Member.objects.filter(available, organization=organization)
         self.fields["assignee"].empty_label = "Sem responsável"
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        project = cleaned_data.get("project")
+        due_date = cleaned_data.get("due_date")
+
+        if project and due_date:
+            if due_date < project.created_at.date():
+                raise forms.ValidationError("O prazo não pode ser anterior a criação do projeto")
+
+        return cleaned_data
+
 
 class SubtaskForm(forms.ModelForm):
     class Meta:
