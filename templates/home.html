@@ -9,7 +9,11 @@
 {% endblock %}
 
 {% block content %}
-    <div class="grid grid-3">
+    <div class="grid grid-4">
+        <article class="card">
+            <h2 class="card-title"><a href="{% url 'dashboard:index' %}">Dashboard</a></h2>
+            <p class="card-text">Indicadores de entrega, burndown da sprint e carga de trabalho da equipe.</p>
+        </article>
         <article class="card">
             <h2 class="card-title"><a href="{% url 'projects:list' %}">Projetos</a></h2>
             <p class="card-text">Agrupam as tarefas e acompanham o progresso geral do trabalho.</p>

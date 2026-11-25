@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard &middot; Grello{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_subtitle %}
+    <p class="page-description">Indicadores de entrega de {{ current_organization.name }}: andamento das tarefas, fluxo e progresso das sprints.</p>
+{% endblock %}
+
+{% block page_actions %}
+    {% if show_admin_blocks %}
+        <a href="{% url 'dashboard:export_csv' %}?{{ export_query }}" class="btn btn-ghost">Exportar CSV</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% include "dashboard/partials/_filters.html" %}
+
+    <section aria-labelledby="snapshot-title">
+        <div class="section-head">
+            <h2 id="snapshot-title">Retrato atual</h2>
+            <span class="muted section-note">Situação das tarefas hoje, {{ today|date:"d/m/Y" }} &middot; não depende do período</span>
+        </div>
+        <div class="kpi-grid">
+            {% include "dashboard/partials/_kpi.html" with label="Total de tarefas" value=kpis.total note="no escopo filtrado" %}
+            {% include "dashboard/partials/_kpi.html" with label="Em andamento (WIP)" value=kpis.wip note="trabalho em progresso" tone="info" %}
+            {% include "dashboard/partials/_kpi.html" with label="Concluídas" value=kpis.done note="desde o início" tone="success" %}
+            {% if kpis.overdue %}
+                {% include "dashboard/partials/_kpi.html" with label="Atrasadas" value=kpis.overdue note="prazo vencido e não concluídas" tone="danger" %}
+            {% else %}
+                {% include "dashboard/partials/_kpi.html" with label="Atrasadas" value=kpis.overdue note="nenhuma com prazo vencido" %}
+            {% endif %}
+            {% if kpis.blocked %}
+                {% include "dashboard/partials/_kpi.html" with label="Bloqueadas" value=kpis.blocked note="dependência ou subtarefa em aberto" tone="warning" %}
+            {% else %}
+                {% include "dashboard/partials/_kpi.html" with label="Bloqueadas" value=kpis.blocked note="nenhuma travada" %}
+            {% endif %}
+            {% include "dashboard/partials/_kpi.html" with label="Taxa de conclusão" value=kpis.completion_rate suffix="%" note="concluídas ÷ total" %}
+        </div>
+    </section>
+
+    <section aria-labelledby="period-title">
+        <div class="section-head">
+            <h2 id="period-title">No período</h2>
+            <span class="muted section-note">
+                {{ filters.start|date:"d/m/Y" }} a {{ filters.end|date:"d/m/Y" }}{% if filters.default_period %} &middot; últimos {{ default_period_days }} dias{% endif %}
+            </span>
+        </div>
+        <div class="kpi-grid">
+            {% include "dashboard/partials/_kpi.html" with label="Throughput" value=kpis.throughput note="tarefas concluídas no período" %}
+            {% include "dashboard/partials/_kpi.html" with label="Lead time médio" value=kpis.lead_time_days suffix=" dias" note="da criação à conclusão" %}
+            {% include "dashboard/partials/_kpi.html" with label="Cycle time médio" value=kpis.cycle_time_days suffix=" dias" note="do início à conclusão" %}
+            {% include "dashboard/partials/_kpi.html" with label="Entrega no prazo" value=kpis.on_time_rate suffix="%" note=on_time_note %}
+        </div>
+    </section>
+
+    <div class="chart-grid">
+        <article class="card chart-card chart-card-wide" id="sprint-chart-card">
+            {% if burndown %}
+                <div class="chart-head">
+                    <div>
+                        <h2 class="chart-title">Progresso da sprint</h2>
+                        <p class="chart-subtitle">
+                            {{ burndown.sprint.project }} &middot; {{ burndown.sprint.name }} &middot;
+                            {{ burndown.sprint.start_date|date:"d/m" }} a {{ burndown.sprint.end_date|date:"d/m/Y" }}
+                            <span class="badge {{ state_badge }}">{{ burndown.sprint.state_label }}</span>
+                        </p>
+                    </div>
+                    {% if burndown.total %}
+                        <div class="chart-toggle" role="group" aria-label="Tipo de gráfico da sprint">
+                            <button type="button" class="chart-toggle-btn is-active" data-view="burndown" aria-pressed="true">Burndown</button>
+                            <button type="button" class="chart-toggle-btn" data-view="burnup" aria-pressed="false">Burnup</button>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <dl class="chart-stats">
+                    <div><dt>Escopo</dt><dd>{{ burndown.total }} tarefa{{ burndown.total|pluralize }}</dd></div>
+                    <div><dt>Concluídas na sprint</dt><dd>{{ burndown.completed_count }}</dd></div>
+                    <div><dt>Restantes</dt><dd>{{ burndown.remaining_count }}</dd></div>
+                    <div><dt>Dias restantes</dt><dd>{{ burndown.days_remaining }}</dd></div>
+                    <div><dt>Situação</dt><dd><span class="badge {{ pace_badge }}">{{ burndown.status_label }}</span></dd></div>
+                </dl>
+
+                {% if burndown.total %}
+                    <div class="chart-canvas chart-canvas-tall">
+                        <canvas id="burndown-chart" role="img" aria-label="Gráfico de burndown da {{ burndown.sprint.name }}: linha ideal comparada ao trabalho restante real"></canvas>
+                    </div>
+                    <p class="chart-note">
+                        Unidade: quantidade de tarefas. O escopo considera as tarefas associadas hoje à sprint (não há histórico de mudanças de escopo).
+                        Cada tarefa conta no dia em que foi concluída; conclusões após o fim da sprint não reduzem o restante da janela.
+                        {% if burndown.completed_after_end %}{{ burndown.completed_after_end }} tarefa{{ burndown.completed_after_end|pluralize }} concluída{{ burndown.completed_after_end|pluralize }} depois do fim.{% endif %}
+                    </p>
+                    <details class="chart-data">
+                        <summary>Ver dados do gráfico</summary>
+                        <div class="table-wrapper">
+                            <table class="data">
+                                <thead><tr><th>Dia</th><th>Restante ideal</th><th>Restante real</th><th>Concluídas (acumulado)</th></tr></thead>
+                                <tbody>
+                                    {% for row in burndown_rows %}
+                                        <tr>
+                                            <td>{{ row.label }}</td>
+                                            <td>{{ row.ideal|floatformat:"-1" }}</td>
+                                            <td>{% if row.remaining is None %}&mdash;{% else %}{{ row.remaining }}{% endif %}</td>
+                                            <td>{% if row.completed is None %}&mdash;{% else %}{{ row.completed }}{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    {{ burndown|json_script:"burndown-data" }}
+                {% else %}
+                    <div class="empty"><p>Esta sprint ainda não tem tarefas associadas.</p></div>
+                {% endif %}
+            {% else %}
+                <h2 class="chart-title">Progresso da sprint</h2>
+                <div class="empty">
+                    <p>Nenhuma sprint cadastrada{% if filters.project %} neste projeto{% endif %}. Crie uma sprint para acompanhar o burndown.</p>
+                    <a href="{% url 'projects:list' %}" class="btn btn-ghost btn-sm">Ver projetos</a>
+                </div>
+            {% endif %}
+        </article>
+
+        <article class="card chart-card">
+            <h2 class="chart-title">Distribuição por status</h2>
+            <p class="chart-subtitle">{{ status_total }} tarefa{{ status_total|pluralize }} no escopo filtrado</p>
+            {% if status_total %}
+                <div class="chart-canvas">
+                    <canvas id="status-chart" role="img" aria-label="Gráfico de rosca com a distribuição das tarefas por status"></canvas>
+                </div>
+                <ul class="chart-legend">
+                    {% for item in status_distribution %}
+                        <li><span class="legend-swatch legend-{{ item.status }}"></span>{{ item.label }} <strong>{{ item.total }}</strong></li>
+                    {% endfor %}
+                </ul>
+                {{ status_distribution|json_script:"status-data" }}
+            {% else %}
+                <div class="empty"><p>Nenhuma tarefa para exibir.</p></div>
+            {% endif %}
+        </article>
+    </div>
+
+    {% if show_admin_blocks %}
+        <div class="section-head">
+            <h2>Séries históricas</h2>
+            <span class="muted section-note">Visíveis apenas para administradores</span>
+        </div>
+        <div class="chart-grid chart-grid-2">
+            <article class="card chart-card">
+                <h2 class="chart-title">Throughput {% if flow.granularity == "month" %}mensal{% else %}semanal{% endif %}</h2>
+                <p class="chart-subtitle">Tarefas concluídas por {% if flow.granularity == "month" %}mês{% else %}semana (início na segunda){% endif %}</p>
+                {% if flow_has_data %}
+                    <div class="chart-canvas">
+                        <canvas id="throughput-chart" role="img" aria-label="Gráfico de barras com as tarefas concluídas por período"></canvas>
+                    </div>
+                {% else %}
+                    <div class="empty"><p>Nenhuma tarefa criada ou concluída no período.</p></div>
+                {% endif %}
+            </article>
+
+            <article class="card chart-card">
+                <h2 class="chart-title">Criadas vs. concluídas</h2>
+                <p class="chart-subtitle">Entrada e saída de trabalho no período</p>
+                {% if flow_has_data %}
+                    <div class="chart-canvas">
+                        <canvas id="flow-chart" role="img" aria-label="Gráfico de linhas comparando tarefas criadas e concluídas por período"></canvas>
+                    </div>
+                    <details class="chart-data">
+                        <summary>Ver dados</summary>
+                        <div class="table-wrapper">
+                            <table class="data">
+                                <thead><tr><th>{% if flow.granularity == "month" %}Mês{% else %}Semana de{% endif %}</th><th>Criadas</th><th>Concluídas</th></tr></thead>
+                                <tbody>
+                                    {% for row in flow_rows %}
+                                        <tr><td>{{ row.label }}</td><td>{{ row.created }}</td><td>{{ row.completed }}</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                {% else %}
+                    <div class="empty"><p>Nenhuma tarefa criada ou concluída no período.</p></div>
+                {% endif %}
+            </article>
+
+            <article class="card chart-card chart-card-full">
+                <h2 class="chart-title">Velocity por sprint</h2>
+                <p class="chart-subtitle">
+                    Tarefas comprometidas vs. concluídas dentro da janela de cada sprint
+                    {% if velocity.average is not None %}&middot; média das encerradas: <strong>{{ velocity.average|floatformat:"-1" }}</strong> tarefas/sprint{% endif %}
+                </p>
+                {% if velocity_rows %}
+                    <div class="chart-canvas">
+                        <canvas id="velocity-chart" role="img" aria-label="Gráfico de barras agrupadas com tarefas comprometidas e concluídas por sprint"></canvas>
+                    </div>
+                    <details class="chart-data">
+                        <summary>Ver dados</summary>
+                        <div class="table-wrapper">
+                            <table class="data">
+                                <thead><tr><th>Sprint</th><th>Período</th><th>Comprometidas</th><th>Concluídas</th></tr></thead>
+                                <tbody>
+                                    {% for row in velocity_rows %}
+                                        <tr>
+                                            <td>{{ row.label }}{% if row.state == "active" %} <span class="badge badge-info">Em andamento</span>{% endif %}</td>
+                                            <td>{{ row.start_date|date:"d/m" }} a {{ row.end_date|date:"d/m/Y" }}</td>
+                                            <td>{{ row.committed }}</td>
+                                            <td>{{ row.completed }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                {% else %}
+                    <div class="empty"><p>Nenhuma sprint iniciada com tarefas associadas.</p></div>
+                {% endif %}
+            </article>
+        </div>
+        {{ flow|json_script:"flow-data" }}
+        {{ velocity|json_script:"velocity-data" }}
+    {% endif %}
+
+    <div class="section-head">
+        <h2>Carga por membro</h2>
+        <span class="muted section-note">Abertas e atrasadas: hoje &middot; concluídas: no período</span>
+    </div>
+    <div class="card card-flush table-wrapper">
+        <table class="data">
+            <thead>
+                <tr><th>Membro</th><th>Abertas</th><th>Em andamento</th><th>Concluídas no período</th><th>Atrasadas</th></tr>
+            </thead>
+            <tbody>
+                {% for row in workload %}
+                    <tr>
+                        <td>{% if row.member_id %}<a href="{% url 'members:detail' row.member_id %}">{{ row.name }}</a>{% else %}<span class="muted">{{ row.name }}</span>{% endif %}</td>
+                        <td>{{ row.open }}</td>
+                        <td>{{ row.in_progress }}</td>
+                        <td>{{ row.done_in_period }}</td>
+                        <td>{% if row.overdue %}<span class="badge badge-danger">{{ row.overdue }}</span>{% else %}0{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="empty">Nenhuma tarefa aberta ou concluída no período.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-head">
+        <h2>Projetos por progresso</h2>
+    </div>
+    <div class="card card-flush table-wrapper">
+        <table class="data">
+            <thead>
+                <tr><th>Projeto</th><th class="col-progress">Progresso</th><th>Concluídas</th><th>Em andamento</th><th>Atrasadas</th></tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                    <tr>
+                        <td><a href="{% url 'projects:detail' project.project_id %}">{{ project.name }}</a></td>
+                        <td>
+                            <p class="progress-label">{{ project.progress }}%</p>
+                            <div class="progress"><span style="width: {{ project.progress }}%"></span></div>
+                        </td>
+                        <td>{{ project.done }} de {{ project.total }}</td>
+                        <td>{{ project.wip }}</td>
+                        <td>{% if project.overdue %}<span class="badge badge-danger">{{ project.overdue }}</span>{% else %}0{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="empty">Nenhum projeto com tarefas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/chart.umd.js' %}" defer></script>
+    <script src="{% static 'js/dashboard.js' %}" defer></script>
+{% endblock %}

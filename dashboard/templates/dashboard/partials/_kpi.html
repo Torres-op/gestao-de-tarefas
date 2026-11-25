@@ -1,0 +1,5 @@
+<article class="kpi-card{% if tone %} kpi-{{ tone }}{% endif %}">
+    <p class="kpi-label">{{ label }}</p>
+    <p class="kpi-value">{% if value is None %}&mdash;{% else %}{{ value }}{% if suffix %}<span class="kpi-suffix">{{ suffix }}</span>{% endif %}{% endif %}</p>
+    {% if note %}<p class="kpi-note">{{ note }}</p>{% endif %}
+</article>

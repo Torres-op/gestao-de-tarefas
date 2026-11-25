@@ -1,0 +1,26 @@
+<form method="get" class="card filter-form dashboard-filters" novalidate>
+    {% if form.non_field_errors %}
+        <ul class="form-errors dashboard-filters-errors">
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+    {% endif %}
+
+    {% for field in form %}
+        <div class="field{% if field.errors %} field-invalid{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+    {% endfor %}
+
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+        <a href="{% url 'dashboard:index' %}" class="btn btn-ghost">Limpar</a>
+    </div>
+
+    <p class="field-help dashboard-filters-help">
+        O período vale para as métricas de fluxo (conclusões e criações). Escolher um projeto ou uma sprint restringe
+        todos os indicadores às tarefas correspondentes; sem sprint escolhida, o gráfico mostra a sprint em andamento.
+        {% if form.errors %}<strong>Filtros inválidos foram ignorados.</strong>{% endif %}
+    </p>
+</form>
